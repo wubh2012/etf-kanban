@@ -20,7 +20,6 @@
       <!-- 大支撑位 -->
       <div class="content-item-support-level">
         <div class="level-content support">
-          <div class="level-title">支撑位</div>
           <div class="level-value">{{ coreData.support_level }}</div>
           <div v-if="coreData.support_comment" class="level-comment">{{ coreData.support_comment }}</div>
           <div v-if="coreData.support_date" class="level-date">{{ coreData.support_date }}</div>
@@ -30,6 +29,7 @@
       <!-- 正常区间 -->
       <div class="content-item-normal-range">
         <div class="level-content normal">
+          <div class="level-value">{{ coreData.normal_level }}</div>
           <div v-if="coreData.normal_comment" class="level-comment">{{ coreData.normal_comment }}</div>
           <div v-if="coreData.normal_date" class="level-date">{{ coreData.normal_date }}</div>
         </div>
@@ -38,7 +38,6 @@
       <!-- 大压力位 -->
       <div class="content-item-pressure-level">
         <div class="level-content pressure">
-          <div class="level-title">压力位</div>
           <div class="level-value">{{ coreData.pressure_level }}</div>
           <div v-if="coreData.pressure_date" class="level-date">{{ coreData.pressure_date }}</div>
         </div>

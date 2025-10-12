@@ -93,23 +93,22 @@ export default {
 }
 
 .index-overview-section {
+  flex: 1;
   width: 300px;
 }
 
 .core-data-section {
-  flex: 2;
+  flex: 3;
   min-width: 600px;
 }
 
 .history-section {
+  flex: 1;
   width: 240px;
 }
 
 /* 响应式布局 */
 @media (max-width: 1200px) {
-  .index-row {
-    flex-direction: column;
-  }
   
   .index-overview-section,
   .core-data-section,

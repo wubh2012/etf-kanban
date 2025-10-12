@@ -59,7 +59,6 @@ export default {
       // 计算支撑位和中间区域的位置百分比
       let temp =  this.getChangePercent();
       let middlePosition = Number(temp) + Number(15);
-      console.log('middlePosition:', temp, middlePosition);
       
       return {
         background: `linear-gradient(to right, 

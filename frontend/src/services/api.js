@@ -64,4 +64,44 @@ export const healthCheck = () => {
   return api.get('/health')
 }
 
+// 数据维护相关API
+// 指数管理
+export const createIndex = (data) => {
+  return api.post('/indices', data)
+}
+
+export const updateIndex = (indexCode, data) => {
+  return api.put(`/indices/${indexCode}`, data)
+}
+
+export const deleteIndex = (indexCode) => {
+  return api.delete(`/indices/${indexCode}`)
+}
+
+// 核心数据管理
+export const createCoreData = (indexCode, data) => {
+  return api.post(`/indices/${indexCode}/core_data`, data)
+}
+
+export const updateCoreData = (indexCode, data) => {
+  return api.put(`/indices/${indexCode}/core_data`, data)
+}
+
+export const deleteCoreData = (indexCode) => {
+  return api.delete(`/indices/${indexCode}/core_data`)
+}
+
+// 历史数据管理
+export const createHistory = (indexCode, data) => {
+  return api.post(`/indices/${indexCode}/history`, data)
+}
+
+export const updateHistory = (indexCode, historyType, data) => {
+  return api.put(`/indices/${indexCode}/history/${historyType}`, data)
+}
+
+export const deleteHistory = (indexCode, historyType) => {
+  return api.delete(`/indices/${indexCode}/history/${historyType}`)
+}
+
 export default api

@@ -13,6 +13,11 @@ const routes = [
     // 路由级代码分割，生成单独的chunk
     // 访问路由时才会加载对应组件
     component: () => import('../views/About.vue')
+  },
+  {
+    path: '/data-maintenance',
+    name: 'DataMaintenance',
+    component: () => import('../views/DataMaintenance.vue')
   }
 ]
 
