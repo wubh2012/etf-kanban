@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>股票指数可视化图表</title>
+    <style>
+        /* 全局样式和字体 */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            background-color: #f7f7f7;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* 单个图表组件的容器 */
+        .stock-widget {
+            background-color: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 600px;
+            box-sizing: border-box;
+        }
+
+        /* 头部区域 */
+        .widget-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .widget-header .info {
+            display: flex;
+            align-items: baseline;
+        }
+        .widget-header .name {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            margin-right: 8px;
+        }
+        .widget-header .code {
+            font-size: 14px;
+            color: #888;
+        }
+        .widget-header .current-value {
+            border: 1px solid #ccc;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 16px;
+            color: #d9534f; /* 橙红色 */
+        }
+        .widget-header .percentages {
+            display: flex;
+            gap: 15px; /* 多个百分比之间的间距 */
+            font-size: 14px;
+            text-align: right;
+        }
+        .percentage-item.negative {
+            color: #5cb85c; /* 绿色 */
+        }
+        .percentage-item.positive {
+            color: #d9534f; /* 红色 */
+        }
+
+        /* 图表标尺的容器 */
+        .scale-container {
+            position: relative;
+            width: 100%;
+            height: 50px; /* 足够的高度来容纳标签 */
+        }
+
+        /* 图表条本身 */
+        .scale-bar {
+            position: absolute;
+            top: 10px; /* 从容器顶部向下偏移一点 */
+            width: 100%;
+            height: 12px;
+            border-radius: 6px;
+        }
+
+        /* 刻度线和标签的容器 */
+        .marker {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform: translateX(-50%); /* 关键：使标记以自身中心对齐 */
+        }
+
+        /* 刻度线 */
+        .marker-line {
+            width: 2px;
+            height: 18px; /* 比bar高一点 */
+            background-color: #666;
+            position: absolute;
+            top: 7px; /* 垂直居中于bar */
+        }
+        .marker-line.red {
+            background-color: #d9534f; /* 红色刻度线 */
+        }
+
+        /* 标签 */
+        .marker-label {
+            position: absolute;
+            bottom: 0;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .marker-label .value {
+            font-weight: bold;
+            font-size: 14px;
+            color: #333;
+        }
+        .marker-label .text {
+            font-size: 12px;
+            color: #555;
+        }
+        
+        /* 底部说明文字 */
+        .widget-footer {
+            margin-top: 5px;
+            font-size: 12px;
+            color: #888;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- 1. 上证指数 -->
+    <div class="stock-widget">
+        <div class="widget-header">
+            <div class="info">
+                <span class="name">上证指数</span>
+                <span class="code">000001</span>
+            </div>
+            <span class="current-value">3352</span>
+            <div class="percentages">
+                <span class="percentage-item negative">距离大支撑: -10.49%</span>
+            </div>
+        </div>
+        <div class="scale-container">
+            <!-- 标尺范围: 2800 ~ 4000 (估算) -->
+            <!-- 3000点位置: (3000-2800)/(4000-2800) = 16.67% -->
+            <!-- 3200点(颜色分界)位置: (3200-2800)/(4000-2800) = 33.33% -->
+            <div class="scale-bar" style="background: linear-gradient(to right, 
+                #48D1CC 0%, #48D1CC 16.67%, 
+                #FFD700 16.67%, #FFD700 33.33%, 
+                #FFFACD 33.33%, #FFFACD 100%
+            );"></div>
+            <div class="marker" style="left: 16.67%;">
+                <div class="marker-line"></div>
+                <div class="marker-label">
+                    <div class="value">3000</div>
+                    <div class="text">大支撑</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. 创业板 -->
+    <div class="stock-widget">
+        <div class="widget-header">
+            <div class="info">
+                <span class="name">创业板</span>
+                <span class="code">399006</span>
+            </div>
+            <span class="current-value">2227</span>
+            <div class="percentages">
+                <span class="percentage-item negative">距离大支撑: -21.42%</span>
+            </div>
+        </div>
+        <div class="scale-container">
+            <!-- 标尺范围: 1600 ~ 3000 (估算) -->
+            <!-- 1750点位置: (1750-1600)/(3000-1600) = 10.71% -->
+            <!-- 2000点(颜色分界)位置: (2000-1600)/(3000-1600) = 28.57% -->
+            <div class="scale-bar" style="background: linear-gradient(to right, 
+                #48D1CC 0%, #48D1CC 10.71%, 
+                #FFD700 10.71%, #FFD700 28.57%, 
+                #FFFACD 28.57%, #FFFACD 100%
+            );"></div>
+            <div class="marker" style="left: 10.71%;">
+                <div class="marker-line"></div>
+                <div class="marker-label">
+                    <div class="value">1750</div>
+                </div>
+            </div>
+        </div>
+        <div class="widget-footer">
+            支撑点位 (1700~1750)
+        </div>
+    </div>
+
+    <!-- 3. 沪深300 -->
+    <div class="stock-widget">
+        <div class="widget-header">
+            <div class="info">
+                <span class="name">沪深300</span>
+                <span class="code">000300</span>
+            </div>
+            <span class="current-value">3940</span>
+            <div class="percentages">
+                <span class="percentage-item negative">距离大支撑: -11.17%</span>
+            </div>
+        </div>
+        <div class="scale-container">
+             <!-- 标尺范围: 3200 ~ 5000 (估算) -->
+            <!-- 3500点位置: (3500-3200)/(5000-3200) = 16.67% -->
+            <!-- 3700点(颜色分界)位置: (3700-3200)/(5000-3200) = 27.78% -->
+            <div class="scale-bar" style="background: linear-gradient(to right, 
+                #48D1CC 0%, #48D1CC 16.67%, 
+                #FFD700 16.67%, #FFD700 27.78%, 
+                #FFFACD 27.78%, #FFFACD 100%
+            );"></div>
+            <div class="marker" style="left: 16.67%;">
+                <div class="marker-line"></div>
+                <div class="marker-label">
+                    <div class="value">3500</div>
+                </div>
+            </div>
+        </div>
+        <div class="widget-footer">
+            支撑点位 (3450~3500)
+        </div>
+    </div>
+
+    <!-- 4. 中证500 -->
+    <div class="stock-widget">
+        <div class="widget-header">
+            <div class="info">
+                <span class="name">中证500</span>
+                <span class="code">000905</span>
+            </div>
+            <span class="current-value">5944</span>
+            <div class="percentages">
+                <span class="percentage-item negative">距离大支撑: -12.60%</span>
+                <span class="percentage-item positive">距离外太空: 36.27%</span>
+            </div>
+        </div>
+        <div class="scale-container">
+            <!-- 标尺范围: 4800 ~ 8500 (估算) -->
+            <!-- 5195点位置: (5195-4800)/(8500-4800) = 10.68% -->
+            <!-- 5600点(颜色分界)位置: (5600-4800)/(8500-4800) = 21.62% -->
+            <!-- 8100点位置: (8100-4800)/(8500-4800) = 89.19% -->
+            <div class="scale-bar" style="background: linear-gradient(to right, 
+                #48D1CC 0%, #48D1CC 10.68%, 
+                #FFD700 10.68%, #FFD700 21.62%, 
+                #FFFACD 21.62%, #FFFACD 89.19%,
+                #FFD2D2 89.19%, #FFD2D2 100%
+            );"></div>
+            <div class="marker" style="left: 10.68%;">
+                <div class="marker-line"></div>
+                <div class="marker-label">
+                    <div class="value">5195</div>
+                    <div class="text">大支撑</div>
+                </div>
+            </div>
+            <div class="marker" style="left: 89.19%;">
+                <div class="marker-line red"></div>
+                <div class="marker-label">
+                    <div class="value" style="color: #d9534f;">8100</div>
+                    <div class="text" style="color: #007bff;">大气层</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
