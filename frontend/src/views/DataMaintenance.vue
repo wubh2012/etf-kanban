@@ -1,13 +1,14 @@
 <template>
   <div class="data-maintenance">
-    <el-tabs v-model="activeTab" type="card" @tab-click="handleTabClick">
+    <IndexWithDataManagement />
+    <!-- <el-tabs v-model="activeTab" type="card" @tab-click="handleTabClick">
       <el-tab-pane label="指数数据管理" name="index-with-data">
-        <IndexWithDataManagement />
+        
       </el-tab-pane>
       <el-tab-pane label="历史数据管理" name="history">
         <HistoryManagement />
       </el-tab-pane>
-    </el-tabs>
+    </el-tabs> -->
   </div>
 </template>
 
