@@ -49,11 +49,6 @@ export const getIndex = (indexCode) => {
   return api.get(`/indices/${indexCode}`)
 }
 
-// 获取特定指数的核心数据
-export const getIndexCoreData = (indexCode) => {
-  return api.get(`/indices/${indexCode}/core_data`)
-}
-
 // 获取特定指数的历史数据
 export const getIndexHistory = (indexCode) => {
   return api.get(`/indices/${indexCode}/history`)
@@ -76,19 +71,6 @@ export const updateIndex = (indexCode, data) => {
 
 export const deleteIndex = (indexCode) => {
   return api.delete(`/indices/${indexCode}`)
-}
-
-// 核心数据管理
-export const createCoreData = (indexCode, data) => {
-  return api.post(`/indices/${indexCode}/core_data`, data)
-}
-
-export const updateCoreData = (indexCode, data) => {
-  return api.put(`/indices/${indexCode}/core_data`, data)
-}
-
-export const deleteCoreData = (indexCode) => {
-  return api.delete(`/indices/${indexCode}/core_data`)
 }
 
 // 历史数据管理

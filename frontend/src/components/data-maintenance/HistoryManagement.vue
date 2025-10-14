@@ -12,7 +12,7 @@
       <el-button type="primary" @click="showAddDialog" :disabled="!selectedIndex">添加历史数据</el-button>
     </div>
     
-    <el-table :data="historyList" style="width: 100%" border v-if="selectedIndex">
+    <el-table :data="historyList" style="width: 100%" border_no v-if="selectedIndex">
       <el-table-column prop="index_code" label="指数代码" width="120" />
       <el-table-column prop="type" label="类型" width="150">
         <template #default="scope">
@@ -89,7 +89,7 @@
 <script>
 import { ref, onMounted, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getIndices, getIndexHistory, createHistory, updateHistory, deleteHistory } from '../../services/api'
+import { getIndices, getIndexHistory, createHistory, updateHistory, deleteHistory } from '@/api/index'
 
 export default {
   name: 'HistoryManagement',

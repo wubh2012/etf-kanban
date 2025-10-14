@@ -3,7 +3,7 @@
     <el-container>
       <el-header class="header">
         <div class="header-left">
-          <h1>ETF看板</h1>
+          <h1>ETF点位看板</h1>
         </div>
         <div class="header-center">
           <el-menu mode="horizontal" :default-active="activeIndex" class="nav-menu" @select="handleSelect" style="width: 100%; max-width: 600px;">
@@ -82,6 +82,9 @@ export default {
 </script>
 
 <style>
+* {
+  box-sizing: border-box;
+}
 #app {
   font-family: 'Avenir', Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -160,7 +163,7 @@ body {
 }
 
 .main-content {
-  padding: 10px;
+  padding: 0;
   background-color: #ffffff;
 }
 </style>

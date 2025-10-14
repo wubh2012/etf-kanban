@@ -1,96 +1,150 @@
 <template>
   <div class="index-with-data-management">
-    <div class="toolbar">
-      <el-button type="primary" @click="showAddDialog">添加指数数据</el-button>
+    <div >
+      <el-button type="primary" @click="handleAdd">添加指数</el-button>
     </div>
     
-    <el-table :data="indexWithDataList" style="width: 100%" border>
-      <el-table-column prop="id" label="ID" width="80" />
-      <el-table-column prop="name" label="指数名称" width="150" />
-      <el-table-column prop="code" label="指数代码" width="120">
+    <el-table
+      :data="tableData"
+      style="width: 100%"
+      border
+      stripe
+      max-width="1600px"
+      margin="0 auto"
+    >
+      <!-- <el-table-column prop="id" label="ID" width="70" /> -->
+      <el-table-column prop="order_no" label="排序" width="80" />
+      <el-table-column prop="name" label="指数名称" width="120" />
+      <el-table-column prop="code" label="指数代码" width="100" />
+      <el-table-column prop="current_point" label="当前点位" width="100" />
+      <el-table-column prop="change_percent" label="涨跌幅(%)" width="100" />
+      <el-table-column prop="support_point" label="支撑点位" width="100" />
+      <el-table-column prop="pressure_point" label="压力点位" width="100" />
+      <!-- <el-table-column prop="progress" label="进度(%)" width="80" /> -->
+      <el-table-column prop="etf_code" label="场内基金" width="100" />
+      <el-table-column prop="mutual_code" label="场外基金" width="100" />
+      <el-table-column prop="support_level" label="支撑点位笔记" width="150" show-overflow-tooltip />
+      <el-table-column prop="normal_level" label="正常区间1" width="150" show-overflow-tooltip />
+      <el-table-column prop="other_level" label="正常区间2" width="150" show-overflow-tooltip />
+      <el-table-column prop="pressure_level" label="压力点位笔记" width="150" show-overflow-tooltip />
+      <el-table-column prop="sell_level" label="卖出点位笔记" width="150" show-overflow-tooltip />
+      <el-table-column label="操作" width="150" fixed="right">
         <template #default="scope">
-          <a :href="`http://quote.eastmoney.com/zs${scope.row.code}.html`" target="_blank" class="index-link">
-            {{ scope.row.code }}
-          </a>
-        </template>
-      </el-table-column>
-      <el-table-column prop="current_point" label="当前点位" width="120" />
-      <el-table-column prop="change_percent" label="距离大支撑涨跌幅(%)" width="180" />
-      <el-table-column prop="support_point" label="支撑点位" width="120" />
-      <el-table-column prop="pressure_point" label="压力点位" width="120" />
-      <el-table-column prop="progress" label="进度(%)" width="100" />
-      <el-table-column prop="etf_code" label="场内基金代码" width="150" />
-      <el-table-column prop="mutual_code" label="场外基金代码" width="150" />
-      <el-table-column prop="updated_at" label="更新时间" width="180" />
-      <el-table-column label="操作" width="200">
-        <template #default="scope">
-          <el-button size="small" @click="showEditDialog(scope.row)">编辑</el-button>
+          <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
           <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
     
-    <!-- 添加/编辑对话框 -->
+    <!-- 编辑对话框 -->
     <el-dialog
       v-model="dialogVisible"
-      :title="isEdit ? '编辑指数数据' : '添加指数数据'"
-      width="700px"
-      @close="resetForm"
+      :title="dialogType === 'add' ? '添加指数' : '编辑指数'"
+      width="900px"
     >
       <el-form
         ref="formRef"
         :model="form"
         :rules="rules"
-        label-width="140px"
+        label-width="120px"
+        label-position="right"
       >
-        <!-- 指数基本信息 -->
-        <el-divider content-position="left">指数基本信息</el-divider>
-        <el-form-item label="指数名称" prop="name">
-          <el-input v-model="form.name" placeholder="请输入指数名称" />
-        </el-form-item>
-        <el-form-item label="指数代码" prop="code">
-          <el-input v-model="form.code" placeholder="请输入指数代码" :disabled="isEdit" />
-        </el-form-item>
-        <el-form-item label="当前点位" prop="current_point">
-          <el-input-number v-model="form.current_point" :precision="2" :step="0.01" />
-        </el-form-item>
-        <el-form-item label="距离大支撑涨跌幅(%)" prop="change_percent">
-          <el-input-number v-model="form.change_percent" :precision="2" :step="0.01" />
-        </el-form-item>
-        <el-form-item label="支撑点位" prop="support_point">
-          <el-input-number v-model="form.support_point" :precision="2" :step="0.01" />
-        </el-form-item>
-        <el-form-item label="压力点位" prop="pressure_point">
-          <el-input-number v-model="form.pressure_point" :precision="2" :step="0.01" />
-        </el-form-item>
-        <el-form-item label="进度(%)" prop="progress">
-          <el-input-number v-model="form.progress" :precision="2" :step="0.01" :min="0" :max="100" />
-        </el-form-item>
+        <el-row :gutter="20">
+          <el-col :span="8">
+            <el-form-item label="排序" prop="order_no">
+              <el-input-number v-model="form.order_no" :min="0" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="指数名称" prop="name">
+              <el-input v-model="form.name" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="指数代码" prop="code">
+              <el-input v-model="form.code" :disabled="dialogType === 'edit'" />
+            </el-form-item>
+          </el-col>
+        </el-row>
         
-        <!-- 核心数据信息 -->
-        <el-divider content-position="left">核心数据信息</el-divider>
-        <el-form-item label="场内基金代码">
-          <el-input v-model="form.etf_code" placeholder="请输入场内基金代码" />
-        </el-form-item>
-        <el-form-item label="场外基金代码">
-          <el-input v-model="form.mutual_code" placeholder="请输入场外基金代码" />
-        </el-form-item>
-        <el-form-item label="支撑点位笔记">
-          <el-input v-model="form.support_level" type="textarea" :rows="3" placeholder="请输入支撑点位笔记" />
-        </el-form-item>
-        <el-form-item label="正常区间笔记">
-          <el-input v-model="form.normal_level" type="textarea" :rows="3" placeholder="请输入正常区间笔记" />
-        </el-form-item>
-        <el-form-item label="压力点位笔记">
-          <el-input v-model="form.pressure_level" type="textarea" :rows="3" placeholder="请输入压力点位笔记" />
-        </el-form-item>
-        <el-form-item label="卖出点位笔记">
-          <el-input v-model="form.sell_level" type="textarea" :rows="3" placeholder="请输入卖出点位笔记" />
-        </el-form-item>
-        <el-form-item label="其他信息">
-          <el-input v-model="form.other_level" type="textarea" :rows="3" placeholder="请输入其他信息" />
-        </el-form-item>
+        <el-row :gutter="20">
+          <el-col :span="8">
+            <el-form-item label="当前点位" prop="current_point">
+              <el-input-number v-model="form.current_point" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+          
+          <el-col :span="8">
+            <el-form-item label="支撑点位" prop="support_point">
+              <el-input-number v-model="form.support_point" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="压力点位" prop="pressure_point">
+              <el-input-number v-model="form.pressure_point" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        
+        <el-row :gutter="20">
+          <el-col :span="8">
+            <el-form-item label="涨跌幅(%)" prop="change_percent">
+              <el-input-number v-model="form.change_percent" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="进度(%)" prop="progress">
+              <el-input-number v-model="form.progress" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="8">
+            <el-form-item label="场内基金" prop="etf_code">
+              <el-input v-model="form.etf_code" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="场外基金" prop="mutual_code">
+              <el-input v-model="form.mutual_code" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="支撑点位笔记" prop="support_level">
+              <el-input v-model="form.support_level" type="textarea" :rows="2" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="正常区间笔记" prop="normal_level">
+              <el-input v-model="form.normal_level" type="textarea" :rows="2" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="正常区间2" prop="other_level">
+              <el-input v-model="form.other_level" type="textarea" :rows="2" />
+            </el-form-item>
+          </el-col>
+          
+        </el-row>
+        
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="压力点位笔记" prop="pressure_level">
+              <el-input v-model="form.pressure_level" type="textarea" :rows="2" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="卖出点位笔记" prop="sell_level">
+              <el-input v-model="form.sell_level" type="textarea" :rows="2" />
+            </el-form-item>
+          </el-col>
+          
+        </el-row>
       </el-form>
+      
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="dialogVisible = false">取消</el-button>
@@ -102,20 +156,22 @@
 </template>
 
 <script>
-import { ref, onMounted, reactive } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getIndices, createIndex, updateIndex, deleteIndex } from '../../services/api'
+import { getIndices, createIndex, updateIndex, deleteIndex } from '@/api/index'
 
 export default {
   name: 'IndexWithDataManagement',
   setup() {
-    const indexWithDataList = ref([])
+    const tableData = ref([])
     const dialogVisible = ref(false)
-    const isEdit = ref(false)
+    const dialogType = ref('add') // 'add' or 'edit'
     const formRef = ref(null)
     
     // 表单数据
-    const form = reactive({
+    const form = ref({
+      id: null,
+      order_no: 0,
       name: '',
       code: '',
       current_point: null,
@@ -142,72 +198,59 @@ export default {
       ]
     }
     
-    // 获取指数列表（包含核心数据）
-    const fetchIndexWithDataList = async () => {
+    // 获取数据
+    const fetchData = async () => {
       try {
-        const data = await getIndices()
-        indexWithDataList.value = data
+        const response = await getIndices()
+        console.log('获取到的指数数据:', response);
+        
+        tableData.value = response
       } catch (error) {
-        ElMessage.error('获取指数数据列表失败: ' + error.message)
+        ElMessage.error('获取数据失败')
+        console.error(error)
       }
-    }
-    
-    // 显示添加对话框
-    const showAddDialog = () => {
-      isEdit.value = false
-      dialogVisible.value = true
-    }
-    
-    // 显示编辑对话框
-    const showEditDialog = (row) => {
-      isEdit.value = true
-      dialogVisible.value = true
-      
-      // 填充表单数据
-      Object.keys(form).forEach(key => {
-        form[key] = row[key] || (key.includes('point') || key.includes('percent') || key === 'progress' ? null : '')
-      })
     }
     
     // 重置表单
     const resetForm = () => {
-      if (formRef.value) {
-        formRef.value.resetFields()
+      form.value = {
+        id: null,
+        order_no: 0,
+        name: '',
+        code: '',
+        current_point: null,
+        change_percent: null,
+        support_point: null,
+        pressure_point: null,
+        progress: null,
+        etf_code: '',
+        mutual_code: '',
+        support_level: '',
+        normal_level: '',
+        pressure_level: '',
+        sell_level: '',
+        other_level: ''
       }
-      
-      Object.keys(form).forEach(key => {
-        form[key] = key.includes('point') || key.includes('percent') || key === 'progress' ? null : ''
-      })
     }
     
-    // 提交表单
-    const handleSubmit = async () => {
-      if (!formRef.value) return
-      
-      await formRef.value.validate(async (valid) => {
-        if (valid) {
-          try {
-            if (isEdit.value) {
-              await updateIndex(form.code, form)
-              ElMessage.success('更新成功')
-            } else {
-              await createIndex(form)
-              ElMessage.success('添加成功')
-            }
-            
-            dialogVisible.value = false
-            fetchIndexWithDataList()
-          } catch (error) {
-            ElMessage.error(isEdit.value ? '更新失败: ' + error.message : '添加失败: ' + error.message)
-          }
-        }
-      })
+    // 添加指数
+    const handleAdd = () => {
+      resetForm()
+      dialogType.value = 'add'
+      dialogVisible.value = true
+    }
+    
+    // 编辑指数
+    const handleEdit = (row) => {
+      form.value = { ...row }
+      dialogType.value = 'edit'
+      dialogVisible.value = true
     }
     
     // 删除指数
     const handleDelete = (row) => {
       ElMessageBox.confirm(
-        `确定要删除指数"${row.name}"吗？此操作将同时删除相关的核心数据和历史数据，且不可恢复。`,
+        `确定要删除指数"${row.name}"吗？`,
         '警告',
         {
           confirmButtonText: '确定',
@@ -218,31 +261,53 @@ export default {
         try {
           await deleteIndex(row.code)
           ElMessage.success('删除成功')
-          fetchIndexWithDataList()
+          fetchData()
         } catch (error) {
-          ElMessage.error('删除失败: ' + error.message)
+          ElMessage.error('删除失败')
+          console.error(error)
         }
       }).catch(() => {
         // 用户取消删除
       })
     }
     
+    // 提交表单
+    const handleSubmit = () => {
+      formRef.value.validate(async (valid) => {
+        if (valid) {
+          try {
+            if (dialogType.value === 'add') {
+              await createIndex(form.value)
+              ElMessage.success('添加成功')
+            } else {
+              await updateIndex(form.value.code, form.value)
+              ElMessage.success('更新成功')
+            }
+            dialogVisible.value = false
+            fetchData()
+          } catch (error) {
+            ElMessage.error(dialogType.value === 'add' ? '添加失败' : '更新失败')
+            console.error(error)
+          }
+        }
+      })
+    }
+    
     onMounted(() => {
-      fetchIndexWithDataList()
+      fetchData()
     })
     
     return {
-      indexWithDataList,
+      tableData,
       dialogVisible,
-      isEdit,
+      dialogType,
       formRef,
       form,
       rules,
-      showAddDialog,
-      showEditDialog,
-      resetForm,
-      handleSubmit,
-      handleDelete
+      handleAdd,
+      handleEdit,
+      handleDelete,
+      handleSubmit
     }
   }
 }
@@ -250,19 +315,14 @@ export default {
 
 <style scoped>
 .index-with-data-management {
-  width: 100%;
+  padding: 20px;
+  max-width: 1600px;
+  margin: 0 auto;
 }
 
-.toolbar {
-  margin-bottom: 20px;
-}
 
-.index-link {
-  color: #409EFF;
-  text-decoration: none;
-}
-
-.index-link:hover {
-  text-decoration: underline;
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
 }
 </style>

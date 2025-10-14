@@ -1,9 +1,14 @@
 import os
 import sqlite3
+import logging
 from datetime import datetime
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from dotenv import load_dotenv
+
+# 配置日志
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # 加载环境变量
 load_dotenv()
@@ -23,6 +28,25 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row  # 使结果可以按列名访问
     return conn
 
+@app.route('/', methods=['GET'])
+def home():
+    """首页"""
+    return jsonify({'status': 'healthy'})
+
+
+# 通用的数据库行转字典函数
+def row_to_dict(row, fields):
+    """将数据库行转换为指定字段的字典"""
+    return {field: row[field] for field in fields if field in row}
+
+# 指数相关字段定义
+INDEX_FIELDS = [
+    'id', 'name', 'code', 'order_no', 'current_point', 'change_percent',
+    'support_point', 'pressure_point', 'progress', 'etf_code', 'mutual_code',
+    'support_level', 'normal_level', 'pressure_level', 'sell_level', 
+    'other_level', 'updated_at'
+]
+
 @app.route('/api/dashboard', methods=['GET'])
 def get_dashboard_data():
     """获取看板数据"""
@@ -30,7 +54,7 @@ def get_dashboard_data():
     
     try:
         # 获取所有指数数据（从合并表中）
-        index_cursor = conn.execute('SELECT * FROM index_with_data ORDER BY id')
+        index_cursor = conn.execute('SELECT * FROM index_with_data ORDER BY order_no')
         index_rows = index_cursor.fetchall()
         
         # 构建数据数组
@@ -100,36 +124,17 @@ def get_dashboard_data():
 
 @app.route('/api/indices', methods=['GET'])
 def get_indices():
-    """获取所有指数数据"""
     conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM index_with_data ORDER BY order_no ASC")
+    indices = cursor.fetchall()
+    conn.close()
     
-    try:
-        index_cursor = conn.execute('SELECT * FROM index_with_data ORDER BY id')
-        indices = []
-        for row in index_cursor:
-            indices.append({
-                'id': row['id'],
-                'name': row['name'],
-                'code': row['code'],
-                'current_point': row['current_point'],
-                'change_percent': row['change_percent'],
-                'support_point': row['support_point'],
-                'pressure_point': row['pressure_point'],
-                'progress': row['progress'],
-                'etf_code': row['etf_code'],
-                'mutual_code': row['mutual_code'],
-                'support_level': row['support_level'],
-                'normal_level': row['normal_level'],
-                'pressure_level': row['pressure_level'],
-                'sell_level': row['sell_level'],
-                'other_level': row['other_level'],
-                'updated_at': row['updated_at']
-            })
-        
-        return jsonify(indices)
+    # 将 Row 对象列表直接转换为字典列表
+    indices_list = [dict(row) for row in indices]
     
-    finally:
-        conn.close()
+    logger.info(f"=== 总共返回 {len(indices)} 条记录 ===")
+    return jsonify(indices_list)
 
 @app.route('/api/indices/<index_code>', methods=['GET'])
 def get_index(index_code):
@@ -141,55 +146,20 @@ def get_index(index_code):
         row = cursor.fetchone()
         
         if row is None:
-            return jsonify({'error': 'Index not found'}), 404
+            return jsonify({'error': '指数信息未找到'}), 404
         
-        index_data = {
-            'id': row['id'],
-            'name': row['name'],
-            'code': row['code'],
-            'current_point': row['current_point'],
-            'change_percent': row['change_percent'],
-            'support_point': row['support_point'],
-            'pressure_point': row['pressure_point'],
-            'progress': row['progress'],
-            'etf_code': row['etf_code'],
-            'mutual_code': row['mutual_code'],
-            'support_level': row['support_level'],
-            'normal_level': row['normal_level'],
-            'pressure_level': row['pressure_level'],
-            'sell_level': row['sell_level'],
-            'other_level': row['other_level'],
-            'updated_at': row['updated_at']
-        }
+        # 定义需要返回的字段列表
+        fields = [
+            'id', 'name', 'code', 'order_no', 'current_point', 'change_percent',
+            'support_point', 'pressure_point', 'progress', 'etf_code', 'mutual_code',
+            'support_level', 'normal_level', 'pressure_level', 'sell_level', 
+            'other_level', 'updated_at'
+        ]
+        
+        # 使用字典推导式构建返回数据
+        index_data = {field: row[field] for field in fields if field in row}
         
         return jsonify(index_data)
-    
-    finally:
-        conn.close()
-
-@app.route('/api/indices/<index_code>/core_data', methods=['GET'])
-def get_index_core_data(index_code):
-    """获取特定指数的核心数据（保持向后兼容的API端点）"""
-    conn = get_db_connection()
-    
-    try:
-        cursor = conn.execute('SELECT * FROM index_with_data WHERE code = ?', (index_code,))
-        row = cursor.fetchone()
-        
-        if row is None:
-            return jsonify({'error': 'Index not found'}), 404
-        
-        core_data = {
-            'etf_code': row['etf_code'],
-            'mutual_code': row['mutual_code'],
-            'support_level': row['support_level'],
-            'normal_level': row['normal_level'],
-            'pressure_level': row['pressure_level'],
-            'sell_level': row['sell_level'],
-            'other_level': row['other_level']
-        }
-        
-        return jsonify(core_data)
     
     finally:
         conn.close()
@@ -236,16 +206,23 @@ def create_index():
         if cursor.fetchone() is not None:
             return jsonify({'error': 'Index code already exists'}), 400
         
+        # 如果没有指定排序，则设置为最大排序值+1
+        if 'order_no' not in data:
+            cursor = conn.execute('SELECT MAX(order_no) FROM index_with_data')
+            max_sort = cursor.fetchone()[0] or 0
+            data['order_no'] = max_sort + 1
+        
         # 插入新指数（包含核心数据字段）
         cursor = conn.execute('''
         INSERT INTO index_with_data (
-            name, code, current_point, change_percent, support_point, pressure_point, progress,
+            name, code, order_no, current_point, change_percent, support_point, pressure_point, progress,
             etf_code, mutual_code, support_level, normal_level, pressure_level, sell_level, other_level
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             data['name'],
             data['code'],
+            data.get('order_no'),
             data.get('current_point'),
             data.get('change_percent'),
             data.get('support_point'),
@@ -267,24 +244,7 @@ def create_index():
         cursor = conn.execute('SELECT * FROM index_with_data WHERE id = ?', (index_id,))
         row = cursor.fetchone()
         
-        return jsonify({
-            'id': row['id'],
-            'name': row['name'],
-            'code': row['code'],
-            'current_point': row['current_point'],
-            'change_percent': row['change_percent'],
-            'support_point': row['support_point'],
-            'pressure_point': row['pressure_point'],
-            'progress': row['progress'],
-            'etf_code': row['etf_code'],
-            'mutual_code': row['mutual_code'],
-            'support_level': row['support_level'],
-            'normal_level': row['normal_level'],
-            'pressure_level': row['pressure_level'],
-            'sell_level': row['sell_level'],
-            'other_level': row['other_level'],
-            'updated_at': row['updated_at']
-        }), 201
+        return jsonify(row_to_dict(row, INDEX_FIELDS)), 201
     
     finally:
         conn.close()
@@ -309,57 +269,11 @@ def update_index(index_code):
         update_fields = []
         update_values = []
         
-        if 'name' in data:
-            update_fields.append('name = ?')
-            update_values.append(data['name'])
-        
-        if 'current_point' in data:
-            update_fields.append('current_point = ?')
-            update_values.append(data['current_point'])
-        
-        if 'change_percent' in data:
-            update_fields.append('change_percent = ?')
-            update_values.append(data['change_percent'])
-        
-        if 'support_point' in data:
-            update_fields.append('support_point = ?')
-            update_values.append(data['support_point'])
-        
-        if 'pressure_point' in data:
-            update_fields.append('pressure_point = ?')
-            update_values.append(data['pressure_point'])
-        
-        if 'progress' in data:
-            update_fields.append('progress = ?')
-            update_values.append(data['progress'])
-        
-        if 'etf_code' in data:
-            update_fields.append('etf_code = ?')
-            update_values.append(data['etf_code'])
-        
-        if 'mutual_code' in data:
-            update_fields.append('mutual_code = ?')
-            update_values.append(data['mutual_code'])
-        
-        if 'support_level' in data:
-            update_fields.append('support_level = ?')
-            update_values.append(data['support_level'])
-        
-        if 'normal_level' in data:
-            update_fields.append('normal_level = ?')
-            update_values.append(data['normal_level'])
-        
-        if 'pressure_level' in data:
-            update_fields.append('pressure_level = ?')
-            update_values.append(data['pressure_level'])
-        
-        if 'sell_level' in data:
-            update_fields.append('sell_level = ?')
-            update_values.append(data['sell_level'])
-        
-        if 'other_level' in data:
-            update_fields.append('other_level = ?')
-            update_values.append(data['other_level'])
+        # 使用字段列表和循环来构建更新语句
+        for field in INDEX_FIELDS:
+            if field in data:
+                update_fields.append(f'{field} = ?')
+                update_values.append(data[field])
         
         if not update_fields:
             return jsonify({'error': 'No valid fields to update'}), 400
@@ -377,24 +291,7 @@ def update_index(index_code):
         cursor = conn.execute('SELECT * FROM index_with_data WHERE code = ?', (index_code,))
         row = cursor.fetchone()
         
-        return jsonify({
-            'id': row['id'],
-            'name': row['name'],
-            'code': row['code'],
-            'current_point': row['current_point'],
-            'change_percent': row['change_percent'],
-            'support_point': row['support_point'],
-            'pressure_point': row['pressure_point'],
-            'progress': row['progress'],
-            'etf_code': row['etf_code'],
-            'mutual_code': row['mutual_code'],
-            'support_level': row['support_level'],
-            'normal_level': row['normal_level'],
-            'pressure_level': row['pressure_level'],
-            'sell_level': row['sell_level'],
-            'other_level': row['other_level'],
-            'updated_at': row['updated_at']
-        })
+        return jsonify(row_to_dict(row, INDEX_FIELDS))
     
     finally:
         conn.close()
@@ -417,193 +314,6 @@ def delete_index(index_code):
         conn.commit()
         
         return jsonify({'message': 'Index deleted successfully'})
-    
-    finally:
-        conn.close()
-
-@app.route('/api/indices/<index_code>/core_data', methods=['POST'])
-def create_core_data(index_code):
-    """创建指数的核心数据（保持向后兼容的API端点）"""
-    data = request.get_json()
-    
-    if not data:
-        return jsonify({'error': 'No data provided'}), 400
-    
-    conn = get_db_connection()
-    
-    try:
-        # 检查指数是否存在
-        cursor = conn.execute('SELECT id FROM index_with_data WHERE code = ?', (index_code,))
-        if cursor.fetchone() is None:
-            return jsonify({'error': 'Index not found'}), 404
-        
-        # 更新指数记录中的核心数据字段
-        update_fields = []
-        update_values = []
-        
-        if 'etf_code' in data:
-            update_fields.append('etf_code = ?')
-            update_values.append(data['etf_code'])
-        
-        if 'mutual_code' in data:
-            update_fields.append('mutual_code = ?')
-            update_values.append(data['mutual_code'])
-        
-        if 'support_level' in data:
-            update_fields.append('support_level = ?')
-            update_values.append(data['support_level'])
-        
-        if 'normal_level' in data:
-            update_fields.append('normal_level = ?')
-            update_values.append(data['normal_level'])
-        
-        if 'pressure_level' in data:
-            update_fields.append('pressure_level = ?')
-            update_values.append(data['pressure_level'])
-        
-        if 'sell_level' in data:
-            update_fields.append('sell_level = ?')
-            update_values.append(data['sell_level'])
-        
-        if 'other_level' in data:
-            update_fields.append('other_level = ?')
-            update_values.append(data['other_level'])
-        
-        if not update_fields:
-            return jsonify({'error': 'No valid fields to update'}), 400
-        
-        update_values.append(index_code)
-        
-        conn.execute(f'''
-        UPDATE index_with_data SET {', '.join(update_fields)}, updated_at = CURRENT_TIMESTAMP
-        WHERE code = ?
-        ''', update_values)
-        
-        conn.commit()
-        
-        # 返回更新后的核心数据
-        cursor = conn.execute('SELECT * FROM index_with_data WHERE code = ?', (index_code,))
-        row = cursor.fetchone()
-        
-        return jsonify({
-            'etf_code': row['etf_code'],
-            'mutual_code': row['mutual_code'],
-            'support_level': row['support_level'],
-            'normal_level': row['normal_level'],
-            'pressure_level': row['pressure_level'],
-            'sell_level': row['sell_level'],
-            'other_level': row['other_level']
-        }), 201
-    
-    finally:
-        conn.close()
-
-@app.route('/api/indices/<index_code>/core_data', methods=['PUT'])
-def update_core_data(index_code):
-    """更新指数的核心数据（保持向后兼容的API端点）"""
-    data = request.get_json()
-    
-    if not data:
-        return jsonify({'error': 'No data provided'}), 400
-    
-    conn = get_db_connection()
-    
-    try:
-        # 检查指数是否存在
-        cursor = conn.execute('SELECT id FROM index_with_data WHERE code = ?', (index_code,))
-        if cursor.fetchone() is None:
-            return jsonify({'error': 'Index not found'}), 404
-        
-        # 更新指数记录中的核心数据字段
-        update_fields = []
-        update_values = []
-        
-        if 'etf_code' in data:
-            update_fields.append('etf_code = ?')
-            update_values.append(data['etf_code'])
-        
-        if 'mutual_code' in data:
-            update_fields.append('mutual_code = ?')
-            update_values.append(data['mutual_code'])
-        
-        if 'support_level' in data:
-            update_fields.append('support_level = ?')
-            update_values.append(data['support_level'])
-        
-        if 'normal_level' in data:
-            update_fields.append('normal_level = ?')
-            update_values.append(data['normal_level'])
-        
-        if 'pressure_level' in data:
-            update_fields.append('pressure_level = ?')
-            update_values.append(data['pressure_level'])
-        
-        if 'sell_level' in data:
-            update_fields.append('sell_level = ?')
-            update_values.append(data['sell_level'])
-        
-        if 'other_level' in data:
-            update_fields.append('other_level = ?')
-            update_values.append(data['other_level'])
-        
-        if not update_fields:
-            return jsonify({'error': 'No valid fields to update'}), 400
-        
-        update_values.append(index_code)
-        
-        conn.execute(f'''
-        UPDATE index_with_data SET {', '.join(update_fields)}, updated_at = CURRENT_TIMESTAMP
-        WHERE code = ?
-        ''', update_values)
-        
-        conn.commit()
-        
-        # 返回更新后的核心数据
-        cursor = conn.execute('SELECT * FROM index_with_data WHERE code = ?', (index_code,))
-        row = cursor.fetchone()
-        
-        return jsonify({
-            'etf_code': row['etf_code'],
-            'mutual_code': row['mutual_code'],
-            'support_level': row['support_level'],
-            'normal_level': row['normal_level'],
-            'pressure_level': row['pressure_level'],
-            'sell_level': row['sell_level'],
-            'other_level': row['other_level']
-        })
-    
-    finally:
-        conn.close()
-
-@app.route('/api/indices/<index_code>/core_data', methods=['DELETE'])
-def delete_core_data(index_code):
-    """删除指数的核心数据（将核心数据字段置空）"""
-    conn = get_db_connection()
-    
-    try:
-        # 检查指数是否存在
-        cursor = conn.execute('SELECT id FROM index_with_data WHERE code = ?', (index_code,))
-        if cursor.fetchone() is None:
-            return jsonify({'error': 'Index not found'}), 404
-        
-        # 将核心数据字段置空
-        conn.execute('''
-        UPDATE index_with_data 
-        SET 
-            etf_code = NULL,
-            mutual_code = NULL,
-            support_level = NULL,
-            normal_level = NULL,
-            pressure_level = NULL,
-            sell_level = NULL,
-            other_level = NULL,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE code = ?
-        ''', (index_code,))
-        
-        conn.commit()
-        
-        return jsonify({'message': 'Core data deleted successfully'})
     
     finally:
         conn.close()
@@ -754,8 +464,13 @@ from database import init_database
 
 # 启动应用
 if __name__ == '__main__':
-    # 初始化数据库
-    init_database()
+    # 检查数据库文件是否存在，如果不存在才初始化数据库
+    db_path = os.path.join(os.path.dirname(__file__), 'etf_kanban.db')
+    if not os.path.exists(db_path):
+        print("数据库文件不存在，开始初始化数据库...")
+        init_database()
+    else:
+        print("数据库文件已存在，跳过初始化")
     
     # 启动Flask服务器
     app.run(debug=app.config['DEBUG'], host='0.0.0.0', port=5000)
