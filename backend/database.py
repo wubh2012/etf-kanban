@@ -45,7 +45,6 @@ def init_database():
         change_percent REAL,             -- 涨跌幅百分比
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (index_code) REFERENCES index_with_data(code),
         UNIQUE(index_code, type)         -- 每个指数每种类型只有一条记录
     )
     ''')

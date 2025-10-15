@@ -52,6 +52,18 @@ export default {
   },
   methods: {
     getIndexUrl() {
+      // 特殊指数列表，需要使用gb前缀
+      const specialIndices = ['GDAXI', 'HSHCI', 'HSI'];
+      
+      // 检查当前指数是否在特殊列表中
+      if (specialIndices.includes(this.index.code)) {
+        return `https://quote.eastmoney.com/gb/zs${this.index.code}.html`;
+      }
+      if(this.index.code === "00700"){
+        return `https://quote.eastmoney.com/hk/00700.html`;
+      }
+      
+      // 默认使用普通链接
       return `http://quote.eastmoney.com/zs${this.index.code}.html`;
     },
     // 获取标尺渐变色样式

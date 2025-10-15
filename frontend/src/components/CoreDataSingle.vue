@@ -190,7 +190,7 @@ export default {
   font-size: 12px;
   background-color: #A6A6A6;
   color: white;
-  padding: 5px;
+  padding: 2px;
   border-radius: 4px;
   display: inline-block;
   margin-right: 5px;

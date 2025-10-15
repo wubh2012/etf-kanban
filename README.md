@@ -105,7 +105,6 @@ etf-kanban/
 - `GET /api/dashboard` - 获取看板数据
 - `GET /api/indices` - 获取所有指数数据
 - `GET /api/indices/<index_code>` - 获取特定指数数据
-- `GET /api/indices/<index_code>/core_data` - 获取特定指数的核心数据
 - `GET /api/indices/<index_code>/history` - 获取特定指数的历史数据
 - `GET /api/health` - 健康检查接口
 

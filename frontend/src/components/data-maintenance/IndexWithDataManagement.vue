@@ -4,10 +4,14 @@
       <el-button type="primary" @click="handleAdd">添加指数</el-button>
     </div>
 
-    <el-table :data="tableData" style="width: 100%" border stripe max-width="1600px" margin="0 auto">
+    <el-table :data="tableData" style="width: 100%" border stripe max-width="1600px" >
       <!-- <el-table-column prop="id" label="ID" width="70" /> -->
       <el-table-column prop="order_no" label="排序" width="80" />
-      <el-table-column prop="name" label="指数名称" width="120" />
+      <el-table-column prop="name" label="指数名称" width="120" >
+        <template #default="scope">
+          <el-link size="small" @click="handleEdit(scope.row)">{{scope.row.name}}</el-link>
+        </template>
+      </el-table-column>
       <el-table-column prop="code" label="指数代码" width="100" />
       <el-table-column prop="current_point" label="当前点位" width="100" />
       <el-table-column prop="change_percent" label="涨跌幅(%)" width="100" />
@@ -30,9 +34,9 @@
     </el-table>
 
     <!-- 编辑对话框 -->
-    <el-dialog v-model="dialogVisible" :title="dialogType === 'add' ? '添加指数' : '编辑指数'" width="900px">
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="120px" label-position="right">
-        <el-row :gutter="20">
+    <el-dialog v-model="dialogVisible" draggable :title="dialogType === 'add' ? '添加指数' : '编辑指数'" width="900px">
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="100px" label-position="right">
+        <el-row :gutter="12">
           <el-col :span="8">
             <el-form-item label="排序" prop="order_no">
               <el-input-number v-model="form.order_no" :min="0" style="width: 100%" />
@@ -50,7 +54,7 @@
           </el-col>
         </el-row>
 
-        <el-row :gutter="20">
+        <el-row :gutter="12">
           <el-col :span="8">
             <el-form-item label="当前点位" prop="current_point">
               <el-input-number v-model="form.current_point" style="width: 100%" />
@@ -69,8 +73,8 @@
           </el-col>
         </el-row>
 
-        <el-row :gutter="20">
-          <el-col :span="8">
+        <el-row :gutter="12">
+          <!-- <el-col :span="8">
             <el-form-item label="涨跌幅(%)" prop="change_percent">
               <el-input-number v-model="form.change_percent" style="width: 100%" />
             </el-form-item>
@@ -79,49 +83,50 @@
             <el-form-item label="进度(%)" prop="progress">
               <el-input-number v-model="form.progress" style="width: 100%" />
             </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="20">
+          </el-col> -->
           <el-col :span="8">
             <el-form-item label="场内基金" prop="etf_code">
               <el-input v-model="form.etf_code" />
             </el-form-item>
           </el-col>
-          <el-col :span="12">
+          <el-col :span="8">
             <el-form-item label="场外基金" prop="mutual_code">
               <el-input v-model="form.mutual_code" />
             </el-form-item>
           </el-col>
+        </el-row>
+        <el-row :gutter="12">
+          
           <el-col :span="12">
             <el-form-item label="支撑点位笔记" prop="support_level">
-              <el-input v-model="form.support_level" type="textarea" :rows="2" />
+              <el-input v-model="form.support_level" type="textarea" :rows="1" />
             </el-form-item>
           </el-col>
         </el-row>
 
-        <el-row :gutter="20">
+        <el-row :gutter="12">
           <el-col :span="12">
             <el-form-item label="正常区间笔记" prop="normal_level">
-              <el-input v-model="form.normal_level" type="textarea" :rows="2" />
+              <el-input v-model="form.normal_level" type="textarea" :rows="1" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="正常区间2" prop="other_level">
-              <el-input v-model="form.other_level" type="textarea" :rows="2" />
+              <el-input v-model="form.other_level" type="textarea" :rows="1" />
             </el-form-item>
           </el-col>
 
         </el-row>
 
-        <el-row :gutter="20">
+        <el-row :gutter="12">
           <el-col :span="12">
             <el-form-item label="压力点位笔记" prop="pressure_level">
-              <el-input v-model="form.pressure_level" type="textarea" :rows="2" />
+              <el-input v-model="form.pressure_level" type="textarea" :rows="1" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="卖出点位笔记" prop="sell_level">
-              <el-input v-model="form.sell_level" type="textarea" :rows="2" />
+              <el-input v-model="form.sell_level" type="textarea" :rows="1" />
             </el-form-item>
           </el-col>
 
@@ -130,57 +135,50 @@
         <!-- 历史数据部分 - 在添加和编辑模式下都显示 -->
         <div>
           <el-divider content-position="left">历史数据</el-divider>
-          <el-row :gutter="20">
+          <el-row :gutter="12">
             <el-col :span="12">
-              <el-card shadow="never">
-                <template #header>
-                  <div class="card-header">
-                    <span>三年低点</span>
-                  </div>
-                </template>
-                <el-form-item label="点位" prop="historyLow.value">
-                  <el-input-number v-model="form.historyLow.value" :precision="2" :step="0.01" style="width: 100%" />
-                </el-form-item>
-                <el-form-item label="日期" prop="historyLow.date">
-                  <el-date-picker
-                    v-model="form.historyLow.date"
-                    type="date"
-                    placeholder="选择日期"
-                    format="YYYY-MM-DD"
-                    value-format="YYYY-MM-DD"
-                    style="width: 100%"
-                  />
-                </el-form-item>
-                <el-form-item label="涨跌幅(%)" prop="historyLow.change_percent">
-                  <el-input-number v-model="form.historyLow.change_percent" :precision="2" :step="0.01" style="width: 100%" />
-                </el-form-item>
-              </el-card>
-            </el-col>
-            <el-col :span="12">
-              <el-card shadow="never">
+              <el-card shadow="never" style="margin-bottom: 0;">
                 <template #header>
                   <div class="card-header">
                     <span>三年高点</span>
                   </div>
                 </template>
+                <el-form-item label="涨跌幅(%)" prop="historyHigh.change_percent">
+                  <el-input-number v-model="form.historyHigh.change_percent" :precision="2" :step="0.01"
+                    style="width: 100%" />
+                </el-form-item>
                 <el-form-item label="点位" prop="historyHigh.value">
                   <el-input-number v-model="form.historyHigh.value" :precision="2" :step="0.01" style="width: 100%" />
                 </el-form-item>
                 <el-form-item label="日期" prop="historyHigh.date">
-                  <el-date-picker
-                    v-model="form.historyHigh.date"
-                    type="date"
-                    placeholder="选择日期"
-                    format="YYYY-MM-DD"
-                    value-format="YYYY-MM-DD"
-                    style="width: 100%"
-                  />
+                  <el-date-picker v-model="form.historyHigh.date" type="date" placeholder="选择日期" format="YYYY-MM-DD"
+                    value-format="YYYY-MM-DD" style="width: 100%" />
                 </el-form-item>
-                <el-form-item label="涨跌幅(%)" prop="historyHigh.change_percent">
-                  <el-input-number v-model="form.historyHigh.change_percent" :precision="2" :step="0.01" style="width: 100%" />
-                </el-form-item>
+
               </el-card>
             </el-col>
+            <el-col :span="12">
+              <el-card shadow="never" style="margin-bottom: 0;">
+                <template #header>
+                  <div class="card-header">
+                    <span>三年低点</span>
+                  </div>
+                </template>
+                <el-form-item label="涨跌幅(%)" prop="historyLow.change_percent">
+                  <el-input-number v-model="form.historyLow.change_percent" :precision="2" :step="0.01"
+                    style="width: 100%" />
+                </el-form-item>
+                <el-form-item label="点位" prop="historyLow.value">
+                  <el-input-number v-model="form.historyLow.value" :precision="2" :step="0.01" style="width: 100%" />
+                </el-form-item>
+                <el-form-item label="日期" prop="historyLow.date">
+                  <el-date-picker v-model="form.historyLow.date" type="date" placeholder="选择日期" format="YYYY-MM-DD"
+                    value-format="YYYY-MM-DD" style="width: 100%" />
+                </el-form-item>
+
+              </el-card>
+            </el-col>
+
           </el-row>
         </div>
       </el-form>
@@ -329,7 +327,7 @@ export default {
         date: '',
         change_percent: null
       }
-      
+
       // 获取历史数据
       try {
         const historyData = await getIndexHistory(row.code)
@@ -352,7 +350,7 @@ export default {
         // 如果没有历史数据，保持默认值
         console.log('获取历史数据失败:', error)
       }
-      
+
       dialogVisible.value = true
     }
 
@@ -389,7 +387,7 @@ export default {
               // 先创建指数
               const indexResponse = await createIndex(form.value)
               ElMessage.success('添加成功')
-              
+
               // 如果有历史数据，则创建历史数据
               const indexCode = form.value.code
               if (form.value.historyLow.value && form.value.historyLow.date) {
@@ -400,7 +398,7 @@ export default {
                   change_percent: form.value.historyLow.change_percent
                 })
               }
-              
+
               if (form.value.historyHigh.value && form.value.historyHigh.date) {
                 await createHistory(indexCode, {
                   type: 'three_year_high',
@@ -413,7 +411,7 @@ export default {
               // 更新指数
               await updateIndex(form.value.code, form.value)
               ElMessage.success('更新成功')
-              
+
               // 更新历史数据
               const indexCode = form.value.code
               // 更新三年低点
@@ -442,7 +440,7 @@ export default {
                   }
                 }
               }
-              
+
               // 更新三年高点
               if (form.value.historyHigh.value && form.value.historyHigh.date) {
                 try {
@@ -504,7 +502,6 @@ export default {
 .index-with-data-management {
   padding: 20px;
   max-width: 1600px;
-  margin: 0 auto;
 }
 
 .dialog-footer {
@@ -515,5 +512,22 @@ export default {
 .card-header {
   font-weight: bold;
   color: #409EFF;
+}
+
+/* 使表单更加紧凑的样式 */
+:deep(.el-form-item) {
+  margin-bottom: 12px;
+}
+
+:deep(.el-card__body) {
+  padding: 12px;
+}
+
+:deep(.el-dialog__body) {
+  padding: 15px 20px;
+}
+
+:deep(.el-divider) {
+  margin: 8px 0;
 }
 </style>
