@@ -11,7 +11,7 @@
           </li>
           <li class="about-item">
             <i class="icon">🎨</i>
-            <span>图表原创来源于新米练习菌</span>
+            <span>图表原创来源于新米练习菌，在此基础上进行了一定的修改</span>
           </li>
           <li class="about-item">
             <i class="icon">🐮</i>

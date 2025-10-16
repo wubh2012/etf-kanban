@@ -4,22 +4,57 @@
       <el-button type="primary" @click="handleAdd">添加指数</el-button>
     </div>
 
-    <el-table :data="tableData" style="width: 100%" border stripe max-width="1600px" >
+    <el-table :data="tableData" style="width: 100%" border stripe max-width="1600px">
       <!-- <el-table-column prop="id" label="ID" width="70" /> -->
-      <el-table-column prop="order_no" label="排序" width="80" />
-      <el-table-column prop="name" label="指数名称" width="120" >
+      <el-table-column prop="order_no" label="排序" width="80" align="center"/>
+      <el-table-column prop="name" label="指数名称" width="120" align="center">
         <template #default="scope">
-          <el-link size="small" @click="handleEdit(scope.row)">{{scope.row.name}}</el-link>
+          <el-link size="small" @click="handleEdit(scope.row)">{{ scope.row.name }}</el-link>
         </template>
       </el-table-column>
-      <el-table-column prop="code" label="指数代码" width="100" />
-      <el-table-column prop="current_point" label="当前点位" width="100" />
-      <el-table-column prop="change_percent" label="涨跌幅(%)" width="100" />
-      <el-table-column prop="support_point" label="支撑点位" width="100" />
-      <el-table-column prop="pressure_point" label="压力点位" width="100" />
-      <!-- <el-table-column prop="progress" label="进度(%)" width="80" /> -->
-      <el-table-column prop="etf_code" label="场内基金" width="100" />
-      <el-table-column prop="mutual_code" label="场外基金" width="100" />
+      <el-table-column prop="code" label="指数代码" width="100" align="center"/>
+      <el-table-column prop="change_percent" label="支撑点涨跌幅(%)" width="140" align="right">
+        <template #default="scope">
+          <span :class="scope.row.change_percent >= 0 ? 'positive-value' : 'negative-value'">
+            {{ scope.row.change_percent !== null && scope.row.change_percent !== undefined ?
+              scope.row.change_percent.toFixed(2) : '-' }}
+          </span>
+        </template>
+      </el-table-column>
+      <el-table-column prop="support_point" label="支撑点位" width="100" align="right">
+        <template #default="scope">
+          <span class="support-point-value">
+            {{ scope.row.support_point !== null && scope.row.support_point !== undefined ? scope.row.support_point : '-'
+            }}
+          </span>
+        </template>
+      </el-table-column>
+
+      <el-table-column prop="current_point" label="当前点位" width="100" align="right">
+        <template #default="scope">
+          <span class="current-point-value">
+            {{ scope.row.current_point !== null && scope.row.current_point !== undefined ? scope.row.current_point : '-'
+            }}
+          </span>
+        </template>
+      </el-table-column>
+      <el-table-column prop="pressure_point" label="压力点位" width="100" align="right">
+        <template #default="scope">
+          <span class="pressure-point-value">
+            {{ scope.row.pressure_point !== null && scope.row.pressure_point !== undefined ? scope.row.pressure_point :
+              '-' }}
+          </span>
+        </template>
+      </el-table-column>
+      <el-table-column prop="progress" label="压力点涨跌幅(%)" width="140" align="right">
+        <template #default="scope">
+          <span :class="scope.row.progress >= 0 ? 'positive-value' : 'negative-value'">
+            {{ scope.row.progress !== null && scope.row.progress !== undefined ? scope.row.progress.toFixed(2) : '-' }}
+          </span>
+        </template>
+      </el-table-column>
+      <el-table-column prop="etf_code" label="场内基金" width="100" align="center"/>
+      <el-table-column prop="mutual_code" label="场外基金" width="100" align="center"/>
       <el-table-column prop="support_level" label="支撑点位笔记" width="150" show-overflow-tooltip />
       <el-table-column prop="normal_level" label="正常区间1" width="150" show-overflow-tooltip />
       <el-table-column prop="other_level" label="正常区间2" width="150" show-overflow-tooltip />
@@ -96,10 +131,10 @@
           </el-col>
         </el-row>
         <el-row :gutter="12">
-          
+
           <el-col :span="12">
             <el-form-item label="支撑点位笔记" prop="support_level">
-              <el-input v-model="form.support_level" type="textarea" :rows="1" />
+              <el-input v-model="form.support_level" type="textarea" :rows="2" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -107,12 +142,12 @@
         <el-row :gutter="12">
           <el-col :span="12">
             <el-form-item label="正常区间笔记" prop="normal_level">
-              <el-input v-model="form.normal_level" type="textarea" :rows="1" />
+              <el-input v-model="form.normal_level" type="textarea" :rows="2" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="正常区间2" prop="other_level">
-              <el-input v-model="form.other_level" type="textarea" :rows="1" />
+              <el-input v-model="form.other_level" type="textarea" :rows="2" />
             </el-form-item>
           </el-col>
 
@@ -121,12 +156,12 @@
         <el-row :gutter="12">
           <el-col :span="12">
             <el-form-item label="压力点位笔记" prop="pressure_level">
-              <el-input v-model="form.pressure_level" type="textarea" :rows="1" />
+              <el-input v-model="form.pressure_level" type="textarea" :rows="2" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="卖出点位笔记" prop="sell_level">
-              <el-input v-model="form.sell_level" type="textarea" :rows="1" />
+              <el-input v-model="form.sell_level" type="textarea" :rows="2" />
             </el-form-item>
           </el-col>
 
@@ -193,309 +228,350 @@
   </div>
 </template>
 
-<script>
-import { ref, onMounted } from 'vue'
+<script setup>
+import { ref, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getIndices, createIndex, updateIndex, deleteIndex, createHistory, getIndexHistory, updateHistory } from '@/api/index'
 
-export default {
-  name: 'IndexWithDataManagement',
-  setup() {
-    const tableData = ref([])
-    const dialogVisible = ref(false)
-    const dialogType = ref('add') // 'add' or 'edit'
-    const formRef = ref(null)
+// 响应式数据
+const tableData = ref([])
+const dialogVisible = ref(false)
+const dialogType = ref('add') // 'add' or 'edit'
+const formRef = ref(null)
 
-    // 表单数据
-    const form = ref({
-      id: null,
-      order_no: 0,
-      name: '',
-      code: '',
-      current_point: null,
-      change_percent: null,
-      support_point: null,
-      pressure_point: null,
-      progress: null,
-      etf_code: '',
-      mutual_code: '',
-      support_level: '',
-      normal_level: '',
-      pressure_level: '',
-      sell_level: '',
-      other_level: '',
-      // 历史数据字段
-      historyLow: {
-        value: null,
-        date: '',
-        change_percent: null
-      },
-      historyHigh: {
-        value: null,
-        date: '',
-        change_percent: null
-      }
-    })
+// 表单数据
+const form = ref({
+  id: null,
+  order_no: 0,
+  name: '',
+  code: '',
+  current_point: null,
+  change_percent: null,
+  support_point: null,
+  pressure_point: null,
+  progress: null,
+  etf_code: '',
+  mutual_code: '',
+  support_level: '',
+  normal_level: '',
+  pressure_level: '',
+  sell_level: '',
+  other_level: '',
+  // 历史数据字段
+  historyLow: {
+    value: null,
+    date: '',
+    change_percent: null
+  },
+  historyHigh: {
+    value: null,
+    date: '',
+    change_percent: null
+  }
+})
 
-    // 表单验证规则
-    const rules = {
-      name: [
-        { required: true, message: '请输入指数名称', trigger: 'blur' }
-      ],
-      code: [
-        { required: true, message: '请输入指数代码', trigger: 'blur' }
-      ],
-      'historyLow.value': [
-        { required: false, message: '请输入点位', trigger: 'blur' }
-      ],
-      'historyLow.date': [
-        { required: false, message: '请选择日期', trigger: 'change' }
-      ],
-      'historyHigh.value': [
-        { required: false, message: '请输入点位', trigger: 'blur' }
-      ],
-      'historyHigh.date': [
-        { required: false, message: '请选择日期', trigger: 'change' }
-      ]
+// 表单验证规则
+const rules = {
+  name: [
+    { required: true, message: '请输入指数名称', trigger: 'blur' }
+  ],
+  code: [
+    { required: true, message: '请输入指数代码', trigger: 'blur' }
+  ],
+  'historyLow.value': [
+    { required: false, message: '请输入点位', trigger: 'blur' }
+  ],
+  'historyLow.date': [
+    { required: false, message: '请选择日期', trigger: 'change' }
+  ],
+  'historyHigh.value': [
+    { required: false, message: '请输入点位', trigger: 'blur' }
+  ],
+  'historyHigh.date': [
+    { required: false, message: '请选择日期', trigger: 'change' }
+  ]
+}
+
+// 计算涨跌幅的通用函数
+const calculateChangePercent = (startPoint, endPoint) => {
+  if (startPoint === null || startPoint === undefined ||
+    endPoint === null || endPoint === undefined ||
+    endPoint === 0) {
+    return null;
+  }
+
+  let result = ((endPoint - startPoint) / startPoint * 100).toFixed(2);
+  return result;
+}
+
+
+// 获取数据
+const fetchData = async () => {
+  try {
+    const response = await getIndices()
+    console.log('获取到的指数数据:', response);
+
+    // 为每条数据计算涨跌幅
+    const processedData = response.map(item => {
+      // 如果后端没有提供涨跌幅数据，或者当前点位已更新，则重新计算
+      const changePercent = calculateChangePercent(item.current_point, item.support_point);
+      const pressureChangePercent = calculateChangePercent(item.current_point, item.pressure_point);
+
+      return {
+        ...item,
+        change_percent: changePercent !== null ? parseFloat(changePercent) : item.change_percent,
+        progress: pressureChangePercent !== null ? parseFloat(pressureChangePercent) : item.progress
+      };
+    });
+
+    tableData.value = processedData
+  } catch (error) {
+    ElMessage.error('获取数据失败')
+    console.error(error)
+  }
+}
+
+// 重置表单
+const resetForm = () => {
+  form.value = {
+    id: null,
+    order_no: 0,
+    name: '',
+    code: '',
+    current_point: null,
+    change_percent: null,
+    support_point: null,
+    pressure_point: null,
+    progress: null,
+    etf_code: '',
+    mutual_code: '',
+    support_level: '',
+    normal_level: '',
+    pressure_level: '',
+    sell_level: '',
+    other_level: '',
+    // 历史数据字段
+    historyLow: {
+      value: null,
+      date: '',
+      change_percent: null
+    },
+    historyHigh: {
+      value: null,
+      date: '',
+      change_percent: null
     }
+  }
+}
 
-    // 获取数据
-    const fetchData = async () => {
+// 添加指数
+const handleAdd = () => {
+  resetForm()
+  dialogType.value = 'add'
+  dialogVisible.value = true
+}
+
+// 编辑指数
+const handleEdit = async (row) => {
+  form.value = { ...row }
+  dialogType.value = 'edit'
+  // 确保历史数据字段存在
+  form.value.historyLow = form.value.historyLow || {
+    value: null,
+    date: '',
+    change_percent: null
+  }
+  form.value.historyHigh = form.value.historyHigh || {
+    value: null,
+    date: '',
+    change_percent: null
+  }
+
+  // 获取历史数据
+  try {
+    const historyData = await getIndexHistory(row.code)
+    // 填充历史数据到表单
+    if (historyData['three_year_low']) {
+      form.value.historyLow = {
+        value: historyData['three_year_low'].value,
+        date: historyData['three_year_low'].date,
+        change_percent: historyData['three_year_low'].change_percent
+      }
+    }
+    if (historyData['three_year_high']) {
+      form.value.historyHigh = {
+        value: historyData['three_year_high'].value,
+        date: historyData['three_year_high'].date,
+        change_percent: historyData['three_year_high'].change_percent
+      }
+    }
+  } catch (error) {
+    // 如果没有历史数据，保持默认值
+    console.log('获取历史数据失败:', error)
+  }
+
+  dialogVisible.value = true
+}
+
+// 删除指数
+const handleDelete = (row) => {
+  ElMessageBox.confirm(
+    `确定要删除指数"${row.name}"吗？`,
+    '警告',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(async () => {
+    try {
+      await deleteIndex(row.code)
+      ElMessage.success('删除成功')
+      fetchData()
+    } catch (error) {
+      ElMessage.error('删除失败')
+      console.error(error)
+    }
+  }).catch(() => {
+    // 用户取消删除
+  })
+}
+
+// 提交表单
+const handleSubmit = () => {
+  formRef.value.validate(async (valid) => {
+    if (valid) {
       try {
-        const response = await getIndices()
-        console.log('获取到的指数数据:', response);
+        // 在提交前计算涨跌幅
+        const changePercent = calculateChangePercent(form.value.current_point, form.value.support_point);
+        const pressureChangePercent = calculateChangePercent(form.value.current_point, form.value.pressure_point);
 
-        tableData.value = response
-      } catch (error) {
-        ElMessage.error('获取数据失败')
-        console.error(error)
-      }
-    }
+        // 更新表单数据
+        const updatedForm = {
+          ...form.value,
+          change_percent: changePercent !== null ? parseFloat(changePercent) : null,
+          progress: pressureChangePercent !== null ? parseFloat(pressureChangePercent) : null
+        };
 
-    // 重置表单
-    const resetForm = () => {
-      form.value = {
-        id: null,
-        order_no: 0,
-        name: '',
-        code: '',
-        current_point: null,
-        change_percent: null,
-        support_point: null,
-        pressure_point: null,
-        progress: null,
-        etf_code: '',
-        mutual_code: '',
-        support_level: '',
-        normal_level: '',
-        pressure_level: '',
-        sell_level: '',
-        other_level: '',
-        // 历史数据字段
-        historyLow: {
-          value: null,
-          date: '',
-          change_percent: null
-        },
-        historyHigh: {
-          value: null,
-          date: '',
-          change_percent: null
-        }
-      }
-    }
+        if (dialogType.value === 'add') {
+          // 先创建指数
+          const indexResponse = await createIndex(updatedForm)
+          ElMessage.success('添加成功')
 
-    // 添加指数
-    const handleAdd = () => {
-      resetForm()
-      dialogType.value = 'add'
-      dialogVisible.value = true
-    }
-
-    // 编辑指数
-    const handleEdit = async (row) => {
-      form.value = { ...row }
-      dialogType.value = 'edit'
-      // 确保历史数据字段存在
-      form.value.historyLow = form.value.historyLow || {
-        value: null,
-        date: '',
-        change_percent: null
-      }
-      form.value.historyHigh = form.value.historyHigh || {
-        value: null,
-        date: '',
-        change_percent: null
-      }
-
-      // 获取历史数据
-      try {
-        const historyData = await getIndexHistory(row.code)
-        // 填充历史数据到表单
-        if (historyData['three_year_low']) {
-          form.value.historyLow = {
-            value: historyData['three_year_low'].value,
-            date: historyData['three_year_low'].date,
-            change_percent: historyData['three_year_low'].change_percent
+          // 如果有历史数据，则创建历史数据
+          const indexCode = form.value.code
+          if (form.value.historyLow.value && form.value.historyLow.date) {
+            await createHistory(indexCode, {
+              type: 'three_year_low',
+              value: form.value.historyLow.value,
+              date: form.value.historyLow.date,
+              change_percent: form.value.historyLow.change_percent
+            })
           }
-        }
-        if (historyData['three_year_high']) {
-          form.value.historyHigh = {
-            value: historyData['three_year_high'].value,
-            date: historyData['three_year_high'].date,
-            change_percent: historyData['three_year_high'].change_percent
+
+          if (form.value.historyHigh.value && form.value.historyHigh.date) {
+            await createHistory(indexCode, {
+              type: 'three_year_high',
+              value: form.value.historyHigh.value,
+              date: form.value.historyHigh.date,
+              change_percent: form.value.historyHigh.change_percent
+            })
           }
-        }
-      } catch (error) {
-        // 如果没有历史数据，保持默认值
-        console.log('获取历史数据失败:', error)
-      }
+        } else {
 
-      dialogVisible.value = true
-    }
+          // 更新指数
+          await updateIndex(form.value.code, updatedForm)
+          ElMessage.success('更新成功')
 
-    // 删除指数
-    const handleDelete = (row) => {
-      ElMessageBox.confirm(
-        `确定要删除指数"${row.name}"吗？`,
-        '警告',
-        {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning'
-        }
-      ).then(async () => {
-        try {
-          await deleteIndex(row.code)
-          ElMessage.success('删除成功')
-          fetchData()
-        } catch (error) {
-          ElMessage.error('删除失败')
-          console.error(error)
-        }
-      }).catch(() => {
-        // 用户取消删除
-      })
-    }
-
-    // 提交表单
-    const handleSubmit = () => {
-      formRef.value.validate(async (valid) => {
-        if (valid) {
-          try {
-            if (dialogType.value === 'add') {
-              // 先创建指数
-              const indexResponse = await createIndex(form.value)
-              ElMessage.success('添加成功')
-
-              // 如果有历史数据，则创建历史数据
-              const indexCode = form.value.code
-              if (form.value.historyLow.value && form.value.historyLow.date) {
-                await createHistory(indexCode, {
-                  type: 'three_year_low',
-                  value: form.value.historyLow.value,
-                  date: form.value.historyLow.date,
-                  change_percent: form.value.historyLow.change_percent
-                })
-              }
-
-              if (form.value.historyHigh.value && form.value.historyHigh.date) {
-                await createHistory(indexCode, {
-                  type: 'three_year_high',
-                  value: form.value.historyHigh.value,
-                  date: form.value.historyHigh.date,
-                  change_percent: form.value.historyHigh.change_percent
-                })
-              }
-            } else {
-              // 更新指数
-              await updateIndex(form.value.code, form.value)
-              ElMessage.success('更新成功')
-
-              // 更新历史数据
-              const indexCode = form.value.code
-              // 更新三年低点
-              if (form.value.historyLow.value && form.value.historyLow.date) {
+          // 更新历史数据
+          const indexCode = form.value.code
+          // 更新三年低点
+          if (form.value.historyLow.value && form.value.historyLow.date) {
+            try {
+              await updateHistory(indexCode, 'three_year_low', {
+                value: form.value.historyLow.value,
+                date: form.value.historyLow.date,
+                change_percent: form.value.historyLow.change_percent
+              })
+            } catch (error) {
+              // 如果更新失败，可能是不存在该历史数据，尝试创建
+              if (error.response && error.response.status === 404) {
                 try {
-                  await updateHistory(indexCode, 'three_year_low', {
+                  await createHistory(indexCode, {
+                    type: 'three_year_low',
                     value: form.value.historyLow.value,
                     date: form.value.historyLow.date,
                     change_percent: form.value.historyLow.change_percent
                   })
-                } catch (error) {
-                  // 如果更新失败，可能是不存在该历史数据，尝试创建
-                  if (error.response && error.response.status === 404) {
-                    try {
-                      await createHistory(indexCode, {
-                        type: 'three_year_low',
-                        value: form.value.historyLow.value,
-                        date: form.value.historyLow.date,
-                        change_percent: form.value.historyLow.change_percent
-                      })
-                    } catch (createError) {
-                      console.error('创建三年低点历史数据失败:', createError)
-                    }
-                  } else {
-                    console.error('更新三年低点历史数据失败:', error)
-                  }
+                } catch (createError) {
+                  console.error('创建三年低点历史数据失败:', createError)
                 }
+              } else {
+                console.error('更新三年低点历史数据失败:', error)
               }
+            }
+          }
 
-              // 更新三年高点
-              if (form.value.historyHigh.value && form.value.historyHigh.date) {
+          // 更新三年高点
+          if (form.value.historyHigh.value && form.value.historyHigh.date) {
+            try {
+              await updateHistory(indexCode, 'three_year_high', {
+                value: form.value.historyHigh.value,
+                date: form.value.historyHigh.date,
+                change_percent: form.value.historyHigh.change_percent
+              })
+            } catch (error) {
+              // 如果更新失败，可能是不存在该历史数据，尝试创建
+              if (error.response && error.response.status === 404) {
                 try {
-                  await updateHistory(indexCode, 'three_year_high', {
+                  await createHistory(indexCode, {
+                    type: 'three_year_high',
                     value: form.value.historyHigh.value,
                     date: form.value.historyHigh.date,
                     change_percent: form.value.historyHigh.change_percent
                   })
-                } catch (error) {
-                  // 如果更新失败，可能是不存在该历史数据，尝试创建
-                  if (error.response && error.response.status === 404) {
-                    try {
-                      await createHistory(indexCode, {
-                        type: 'three_year_high',
-                        value: form.value.historyHigh.value,
-                        date: form.value.historyHigh.date,
-                        change_percent: form.value.historyHigh.change_percent
-                      })
-                    } catch (createError) {
-                      console.error('创建三年高点历史数据失败:', createError)
-                    }
-                  } else {
-                    console.error('更新三年高点历史数据失败:', error)
-                  }
+                } catch (createError) {
+                  console.error('创建三年高点历史数据失败:', createError)
                 }
+              } else {
+                console.error('更新三年高点历史数据失败:', error)
               }
             }
-            dialogVisible.value = false
-            fetchData()
-          } catch (error) {
-            ElMessage.error(dialogType.value === 'add' ? '添加失败' : '更新失败')
-            console.error(error)
           }
         }
-      })
+        dialogVisible.value = false
+        fetchData()
+      } catch (error) {
+        ElMessage.error(dialogType.value === 'add' ? '添加失败' : '更新失败')
+        console.error(error)
+      }
     }
-
-    onMounted(() => {
-      fetchData()
-    })
-
-    return {
-      tableData,
-      dialogVisible,
-      dialogType,
-      formRef,
-      form,
-      rules,
-      handleAdd,
-      handleEdit,
-      handleDelete,
-      handleSubmit
-    }
-  }
+  })
 }
+
+onMounted(() => {
+  fetchData()
+})
+
+// 监听当前点位、支撑点位和压力点位的变化，实时计算涨跌幅
+watch(() => form.value.current_point, (newVal) => {
+  if (newVal !== null && newVal !== undefined) {
+    form.value.change_percent = calculateChangePercent(newVal, form.value.support_point);
+    form.value.progress = calculateChangePercent(newVal, form.value.pressure_point);
+  }
+});
+
+watch(() => form.value.support_point, (newVal) => {
+  if (newVal !== null && newVal !== undefined && form.value.current_point !== null && form.value.current_point !== undefined) {
+    form.value.change_percent = calculateChangePercent(form.value.current_point, newVal);
+  }
+});
+
+watch(() => form.value.pressure_point, (newVal) => {
+  if (newVal !== null && newVal !== undefined && form.value.current_point !== null && form.value.current_point !== undefined) {
+    form.value.progress = calculateChangePercent(form.value.current_point, newVal);
+  }
+});
 </script>
 
 <style scoped>
@@ -529,5 +605,32 @@ export default {
 
 :deep(.el-divider) {
   margin: 8px 0;
+}
+
+/* 正负值样式 */
+.positive-value {
+  color: #f56c6c;
+  font-weight: bold;
+}
+
+.negative-value {
+  color: #67c23a;
+  font-weight: bold;
+}
+
+/* 点位颜色样式 */
+.current-point-value {
+  color: #909399;
+  font-weight: bold;
+}
+
+.support-point-value {
+  color: #67c23a;
+  font-weight: bold;
+}
+
+.pressure-point-value {
+  color: #E6A23C;
+  font-weight: bold;
 }
 </style>

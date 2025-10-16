@@ -5,16 +5,19 @@
         <div class="index-name"><a :href="getIndexUrl()" target="_blank" class="index-link">{{ index.name }}</a></div>
         <div class="index-code"><a :href="getIndexUrl()" target="_blank" class="index-link">{{ index.code }}</a></div>
       </div>
-      <div class="index-current-value">{{ index.current_point }}</div>
+      <div class="index-value-container">
+        <div class="index-current-value">{{ index.current_point }}</div>
+        <div class="update-time" v-if="index.updated_at">更新时间: {{ formatUpdateTime(index.updated_at) }}</div>
+      </div>
     </div>
     <div class="percentage-info">
       <div class="percentage-item">
         <span class="percentage-label">距离支撑点位:</span>
-        <span class="percentage-value support-distance" style="color: #FFD700;">{{ index.change_percent }}%</span>
+        <span class="percentage-value support-distance" style="color: #00FFCD;">{{ calculateSupportDistance() }}%</span>
       </div>
       <div class="percentage-item" v-if="index.pressure_point">
         <span class="percentage-label">距离压力位:</span>
-        <span class="percentage-value pressure-distance" style="color: #FFD700;">{{ calculatePressureDistance() }}%</span>
+        <span class="percentage-value pressure-distance" style="color: red;">{{ calculatePressureDistance() }}%</span>
       </div>
     </div>
     <div class="scale-container">
@@ -53,14 +56,20 @@ export default {
   methods: {
     getIndexUrl() {
       // 特殊指数列表，需要使用gb前缀
-      const specialIndices = ['GDAXI', 'HSHCI', 'HSI'];
+      const specialIndices = ['GDAXI', 'HSHCI', 'HSI', 'HSTECH'];
       
       // 检查当前指数是否在特殊列表中
       if (specialIndices.includes(this.index.code)) {
         return `https://quote.eastmoney.com/gb/zs${this.index.code}.html`;
       }
+      if(this.index.code === 'H30533'){
+        return 'https://quote.eastmoney.com/zz/2.H30533.html';
+      }
+      if(this.index.code === '932000'){
+        return 'https://quote.eastmoney.com/zz/2.932000.html';
+      }
       if(this.index.code === "00700"){
-        return `https://quote.eastmoney.com/hk/00700.html`;
+        return `https://xueqiu.com/S/00700`;
       }
       
       // 默认使用普通链接
@@ -91,15 +100,37 @@ export default {
       // 计算支撑位在整个范围中的位置百分比
       return ((currentPoint - minValue) / (maxValue - minValue) * 100).toFixed(2);
     },
+    calculateSupportDistance() {
+      if (this.index.support_point) {
+        const currentPoint = parseFloat(this.index.current_point);
+        const support_point = parseFloat(this.index.support_point);
+        const distance = ((support_point - currentPoint) / support_point * 100).toFixed(2);
+        return (distance);
+      }
+      return 0;
+    },
     // 计算当前点位距离压力位的百分比
     calculatePressureDistance() {
       if (this.index.pressure_point) {
         const currentPoint = parseFloat(this.index.current_point);
         const pressurePoint = parseFloat(this.index.pressure_point);
         const distance = ((pressurePoint - currentPoint) / pressurePoint * 100).toFixed(2);
-        return Math.abs(distance);
+        return (distance);
       }
       return 0;
+    },
+    // 格式化更新时间
+    formatUpdateTime(timeStr) {
+      if (!timeStr) return '';
+      
+      // 如果时间字符串包含空格，说明是完整的时间戳
+      if (timeStr.includes(' ')) {
+        const date = new Date(timeStr);
+        return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+      }
+      
+      // 否则假设是日期字符串
+      return timeStr;
     }
   }
 }
@@ -147,6 +178,18 @@ export default {
   border-radius: 4px;
 }
 
+.index-value-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.update-time {
+  font-size: 10px;
+  color: #909399;
+  margin-top: 2px;
+}
+
 .percentage-info {
   display: flex;
   justify-content: space-between;
@@ -174,7 +217,7 @@ export default {
 }
 
 .index-link {
-  color: inherit;
+  color: #000;
   text-decoration: none;
   transition: color 0.2s;
 }

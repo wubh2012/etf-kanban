@@ -8,7 +8,7 @@
         <div class="header-center">
           <el-menu mode="horizontal" :default-active="activeIndex" class="nav-menu" @select="handleSelect" style="width: 100%; max-width: 600px;">
             <el-menu-item index="/">首页</el-menu-item>
-            <el-menu-item index="/data-maintenance">数据维护</el-menu-item>
+            <!-- <el-menu-item index="/datamgr">数据维护</el-menu-item> -->
             <el-menu-item index="/about">关于</el-menu-item>
           </el-menu>
         </div>

@@ -15,7 +15,7 @@ const routes = [
     component: () => import('../views/About.vue')
   },
   {
-    path: '/data-maintenance',
+    path: '/datamgr',
     name: 'DataMaintenance',
     component: () => import('../views/DataMaintenance.vue')
   }

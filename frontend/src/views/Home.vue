@@ -32,9 +32,9 @@ const dashboardData = ref({
 let refreshTimer = null
 
 // 获取看板数据
-const fetchDashboardData = async () => {
+const fetchDashboardData = async (refreshRealtime = false) => {
   try {
-    const response = await getDashboardData()
+    const response = await getDashboardData(refreshRealtime)
     console.log('获取的原始数据:', response)
     
     // 确保数据格式正确

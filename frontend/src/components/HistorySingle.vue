@@ -86,13 +86,13 @@ export default {
 }
 
 .history-title {
-  font-size: 12px;
-  color: #3f9e3f;
+  font-size: 14px;
+  color: #00FDC9;
 }
 
 /* 自最低点上涨标题 - 红色 */
 .low-title {
-  color: #d73e3e;
+  color: #FF0015;
 }
 
 .history-content {
@@ -111,13 +111,13 @@ export default {
 
 /* 跌幅样式 - 黑色背景，绿色文字 */
 .negative {
-  color: #3f9e3f;
+  color: #00FDC9;
   background-color: #000000;
 }
 
 /* 涨幅样式 - 红色文字 */
 .positive {
-  color: #d73e3e;
+  color: #FF0015;
 }
 
 .history-point {

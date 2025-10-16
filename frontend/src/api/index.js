@@ -34,10 +34,16 @@ api.interceptors.response.use(
   }
 )
 
-// 获取看板数据
-export const getDashboardData = () => {
-  return api.get('/dashboard')
-}
+/**
+ * 获取看板数据
+ * @param {boolean} refreshRealtime - 是否获取实时数据
+ * @returns {Promise} 看板数据
+ */
+export const getDashboardData = (refreshRealtime = false) => {
+  // refreshRealtime = true
+  const params = refreshRealtime ? '?refresh=true' : '';
+  return api.get(`/dashboard${params}`);
+};
 
 // 获取所有指数数据
 export const getIndices = () => {

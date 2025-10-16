@@ -1,10 +1,20 @@
+# 标准库导入
 import os
-import sqlite3
+import time
+import atexit
 import logging
 from datetime import datetime
+
+# 第三方库导入
+import sqlite3
+import requests
+import random
+import pytz
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from dotenv import load_dotenv
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.interval import IntervalTrigger
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -21,12 +31,228 @@ CORS(app)  # 启用CORS支持
 app.config['DEBUG'] = os.getenv('FLASK_ENV', 'production') == 'development'
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///etf_kanban.db')
 
+# 设置中国时区
+china_tz = pytz.timezone('Asia/Shanghai')
+
+def get_china_time():
+    """获取中国时区的当前时间"""
+    return datetime.now(china_tz)
+
+# User-Agent列表，用于随机选择
+USER_AGENTS = [
+    'Opera/8.0 (Macintosh; PPC Mac OS X; U; en)', 
+    'Opera/9.27 (Windows NT 5.2; U; zh-cn)', 
+    'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; Win64; x64; Trident/4.0)', 
+    'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; Trident/4.0)', 
+    'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; WOW64; Trident/6.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0; InfoPath.2; .NET4.0C; .NET4.0E)', 
+    'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; WOW64; Trident/6.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0; InfoPath.2; .NET4.0C; .NET4.0E; QQBrowser/7.3.9825.400)', 
+    'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; WOW64; Trident/6.0; BIDUBrowser 2.x)', 
+    'Mozilla/5.0 (Windows; U; Windows NT 5.1) Gecko/20070309 Firefox/2.0.0.3', 
+    'Mozilla/5.0 (Windows; U; Windows NT 5.1) Gecko/20070803 Firefox/1.5.0.12', 
+    'Mozilla/5.0 (Windows; U; Windows NT 5.2) Gecko/2008070208 Firefox/3.0.1', 
+    'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.12) Gecko/20080219 Firefox/2.0.0.12 Navigator/9.0.0.6', 
+    'Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/28.0.1500.95 Safari/537.36', 
+    'Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0; .NET4.0C; rv:11.0) like Gecko)', 
+    'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:21.0) Gecko/20100101 Firefox/21.0 ', 
+    'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Maxthon/4.0.6.2000 Chrome/26.0.1410.43 Safari/537.1 ', 
+    'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/21.0.1180.92 Safari/537.1 LBBROWSER', 
+    'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36', 
+    'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.11 (KHTML, like Gecko) Chrome/20.0.1132.11 TaoBrowser/3.0 Safari/536.11', 
+    'Mozilla/5.0 (Windows NT 6.3; WOW64; Trident/7.0; rv:11.0) like Gecko', 
+    'Mozilla/5.0 (Macintosh; PPC Mac OS X; U; en) Opera 8.0', 
+]
+
 def get_db_connection():
     """获取数据库连接"""
     db_path = os.path.join(os.path.dirname(__file__), 'etf_kanban.db')
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row  # 使结果可以按列名访问
     return conn
+
+def get_code_prefix(stock_code):
+    """
+    根据股票代码判断交易所前缀（sz或sh）
+    :param stock_code: 股票代码（字符串，如"399006"、"600000"）
+    :return: 交易所前缀"sz"或"sh"
+    """
+    if not stock_code or len(stock_code) < 3:
+        return None  # 无效代码
+    
+    # 取前3位判断
+    prefix = stock_code[:3]
+    # 特殊代码判断
+    if stock_code.upper().startswith('HS'):
+        return "hk"
+    if stock_code.upper() == 'GDAXI':
+        return "de"
+    # 深圳交易所规则
+    if prefix in ["395", "399"]:
+        return "sz"
+    # 上海交易所规则
+    elif prefix in ["000", "001"]:
+        return "s_sh"
+    else:
+        return "s_sh"  # 无法识别
+
+@app.route('/get/indexdata/<index_code>', methods=['GET'])
+def get_realtime_index_data(index_code):
+    """
+    使用腾讯财经API获取指数数据
+    """
+    try:
+        # 尝试使用腾讯财经API
+        prefix = get_code_prefix(index_code)
+        url = f"http://qt.gtimg.cn/q={prefix}{index_code}"
+
+
+        headers = {
+            'User-Agent': random.choice(USER_AGENTS),
+            'Referer': 'http://finance.qq.com',
+        }
+        response = requests.get(url, timeout=10, headers=headers)
+        response.encoding = 'gbk'
+        logger.info(f"指数 {index_code} API返回: {response.text}")
+        if response.status_code == 200 and response.text.startswith('v_'):
+            data_part = response.text.split('"')[1]
+            data_items = data_part.split('~')
+            
+            if len(data_items) >= 4 and data_items[3] and data_items[4]:
+                current_point = float(data_items[3])
+                logger.info(f"指数 {index_code} 当前点位: {current_point}")
+                return {
+                    'current_point': current_point,
+                    'success': True
+                }
+        
+        return None
+    except Exception as e:
+        logger.error(f"API获取指数 {index_code} 数据异常: {str(e)}")
+        return None
+        
+def calculate_change_percent(current_point, support_point):
+    """
+    计算距离大支撑涨跌幅百分比
+    参数:
+        current_point: 当前点位
+        support_point: 支撑点位
+    返回:
+        涨跌幅百分比
+    """
+    if current_point is None or support_point is None or support_point == 0:
+        return None
+    
+    change_percent = ((current_point - support_point) / support_point) * 100
+    return round(change_percent, 2)
+
+def update_index_realtime_data(index_code):
+    """
+    更新指定指数的实时数据
+    参数:
+        index_code: 指数代码
+    返回:
+        更新是否成功
+    """
+    # 获取实时数据
+    realtime_data = get_realtime_index_data(index_code)
+    
+    if realtime_data and realtime_data['success']:
+        conn = get_db_connection()
+        try:
+            # 获取支撑点位
+            cursor = conn.execute('SELECT support_point FROM index_with_data WHERE code = ?', (index_code,))
+            row = cursor.fetchone()
+            
+            if row is None:
+                logger.error(f"未找到指数 {index_code} 的支撑点位")
+                return False
+                
+            support_point = row['support_point']
+            current_point = realtime_data['current_point']
+            
+            # 计算涨跌幅百分比
+            change_percent = calculate_change_percent(current_point, support_point)
+            
+            # 更新数据库中的当前点位和涨跌幅
+            conn.execute('''
+            UPDATE index_with_data 
+            SET current_point = ?, change_percent = ?, updated_at = ?
+            WHERE code = ?
+            ''', (current_point, change_percent, get_china_time().strftime('%Y-%m-%d %H:%M:%S'), index_code))
+            
+            conn.commit()
+            logger.info(f"成功更新指数 {index_code} 的实时数据: 当前点位={current_point}, 涨跌幅={change_percent}%")
+            return True
+            
+        except Exception as e:
+            logger.error(f"更新指数 {index_code} 数据库记录失败: {str(e)}")
+            return False
+        finally:
+            conn.close()
+    
+    return False
+
+def update_all_indices_data():
+    """
+    更新所有指数的实时数据
+    """
+    logger.info("开始定时更新所有指数数据...")
+    
+    conn = get_db_connection()
+    try:
+        # 获取所有指数代码
+        cursor = conn.execute('SELECT code FROM index_with_data')
+        index_codes = [row['code'] for row in cursor.fetchall()]
+        
+        success_count = 0
+        total_count = len(index_codes)
+        
+        # 更新每个指数的数据
+        for index_code in index_codes:
+            
+            # 随机等待1-5秒钟，避免请求太频繁
+            time.sleep(random.uniform(3, 10))
+            if update_index_realtime_data(index_code):
+                success_count += 1
+        
+        logger.info(f"定时更新完成: 成功更新 {success_count}/{total_count} 个指数数据")
+        
+    except Exception as e:
+        logger.error(f"定时更新所有指数数据失败: {str(e)}")
+    finally:
+        conn.close()
+
+def start_scheduler():
+    """
+    启动定时任务调度器
+    """
+    # 从环境变量获取配置
+    scheduler_enabled = os.getenv('SCHEDULER_ENABLED', 'false').lower() == 'true'
+    update_interval = int(os.getenv('UPDATE_INTERVAL_MINUTES', '10'))
+    
+    if not scheduler_enabled:
+        logger.info("定时任务已禁用")
+        return
+    
+    logger.info(f"启动定时任务调度器，更新间隔: {update_interval} 分钟")
+    
+    scheduler = BackgroundScheduler()
+    
+    # 添加定时任务，每隔指定分钟执行一次
+    scheduler.add_job(
+        func=update_all_indices_data,
+        trigger=IntervalTrigger(minutes=update_interval),
+        id='update_indices_data',
+        name='更新所有指数数据',
+        replace_existing=True
+    )
+    
+    # 启动调度器
+    scheduler.start()
+    
+    # 注册退出函数，确保应用退出时关闭调度器
+    atexit.register(lambda: scheduler.shutdown())
+    
+    return scheduler
 
 @app.route('/', methods=['GET'])
 def home():
@@ -50,6 +276,10 @@ INDEX_FIELDS = [
 @app.route('/api/dashboard', methods=['GET'])
 def get_dashboard_data():
     """获取看板数据"""
+    # 检查是否需要获取实时数据
+    refresh_realtime = request.args.get('refresh', 'false').lower() == 'true'
+    # logger.info(f"get_dashboard_data 请求参数: {request.args.get('refresh')}")
+
     conn = get_db_connection()
     
     try:
@@ -63,15 +293,26 @@ def get_dashboard_data():
         for index_row in index_rows:
             index_code = index_row['code']
             
+            # 如果需要获取实时数据，尝试更新当前指数的数据
+            current_point = index_row['current_point']
+            change_percent = index_row['change_percent']
+            
+            if refresh_realtime:
+                realtime_data = get_realtime_index_data(index_code)
+                if realtime_data and realtime_data['success']:
+                    current_point = realtime_data['current_point']
+                    
+            
             # 指数数据
             indices = {
                 'name': index_row['name'],
                 'code': index_code,
-                'current_point': index_row['current_point'],
-                'change_percent': index_row['change_percent'],
+                'current_point': current_point,
+                'change_percent': change_percent,
                 'support_point': index_row['support_point'],
                 'pressure_point': index_row['pressure_point'],
-                'progress': index_row['progress']
+                'progress': index_row['progress'],
+                'updated_at': index_row['updated_at']
             }
             
             # 核心数据（现在直接从同一张表获取）
@@ -114,7 +355,8 @@ def get_dashboard_data():
         # 构建响应数据
         response = {
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'data': data_array
+            'data': data_array,
+            'realtime_data': refresh_realtime
         }
         
         return jsonify(response)
@@ -272,18 +514,24 @@ def update_index(index_code):
         # 使用字段列表和循环来构建更新语句
         for field in INDEX_FIELDS:
             if field in data:
-                update_fields.append(f'{field} = ?')
-                update_values.append(data[field])
-        
+                if field == 'updated_at':
+                    update_fields.append(f'{field} = ?')
+                    update_values.append(get_china_time().strftime('%Y-%m-%d %H:%M:%S'))
+                else:
+                    update_fields.append(f'{field} = ?')
+                    update_values.append(data[field])
+            
         if not update_fields:
             return jsonify({'error': 'No valid fields to update'}), 400
         
         update_values.append(index_code)
         
-        conn.execute(f'''
-        UPDATE index_with_data SET {', '.join(update_fields)}, updated_at = CURRENT_TIMESTAMP
+        sql = f'''
+        UPDATE index_with_data SET {', '.join(update_fields)}
         WHERE code = ?
-        ''', update_values)
+        '''
+        logger.info(f"执行的SQL语句: {sql}, 参数: {update_values}")
+        conn.execute(sql, update_values)
         
         conn.commit()
         
@@ -406,9 +654,9 @@ def update_history(index_code, history_type):
         update_values.append(history_type)
         
         conn.execute(f'''
-        UPDATE history SET {', '.join(update_fields)}, updated_at = CURRENT_TIMESTAMP
+        UPDATE history SET {', '.join(update_fields)}, updated_at = ?
         WHERE index_code = ? AND type = ?
-        ''', update_values)
+        ''', update_values + [get_china_time().strftime('%Y-%m-%d %H:%M:%S')])
         
         conn.commit()
         
@@ -459,6 +707,16 @@ def health_check():
     except Exception as e:
         return jsonify({'status': 'unhealthy', 'error': str(e)}), 500
 
+@app.route('/api/update-all-indices', methods=['POST'])
+def trigger_update_all_indices():
+    """手动触发更新所有指数数据的定时任务"""
+    try:
+        update_all_indices_data()
+        return jsonify({'status': 'success', 'message': '已触发更新所有指数数据'})
+    except Exception as e:
+        logger.error(f"手动触发更新所有指数数据失败: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 # 数据库初始化
 from database import init_database
 
@@ -471,6 +729,9 @@ if __name__ == '__main__':
         init_database()
     else:
         print("数据库文件已存在，跳过初始化")
+    
+    # 启动定时任务调度器
+    scheduler = start_scheduler()
     
     # 启动Flask服务器
     app.run(debug=app.config['DEBUG'], host='0.0.0.0', port=5000)

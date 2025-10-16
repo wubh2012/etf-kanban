@@ -104,7 +104,7 @@ export default {
 .header-item-support-level {
   flex: 1;
   padding: 10px 15px;
-  background-color: #00ffcc;
+  background-color: #00FFCD;
   font-weight: bold;
   text-align: center;
 }
@@ -112,29 +112,29 @@ export default {
 .header-item-normal-range {
   flex: 1;
   padding: 10px 15px;
-  background-color: #ffffcc;
+  background-color: #FFC000;
   font-weight: bold;
   text-align: center;
-  color: #000000;
+  color: #00205F;
 }
 
 .header-item-pressure-level {
   flex: 1;
   padding: 10px 15px;
-  background-color: #ff9999;
+  background-color: #FF7C81;
   font-weight: bold;
   text-align: center;
-  color: #000000;
+  color: #00205F;
   border-right: 1px solid #ddd;
 }
 
 .header-item-sell-point {
   flex: 1;
   padding: 10px 15px;
-  background-color: #ff9999;
+  background-color: #FF7C81;
   font-weight: bold;
   text-align: center;
-  color: #000000;
+  color: #00205F;
 }
 
 /* 内容区域样式 */
