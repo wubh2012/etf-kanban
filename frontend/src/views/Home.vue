@@ -2,14 +2,16 @@
   <div class="home">
     <div class="dashboard-container">
       <div v-for="(item, index) in dashboardData.data" :key="item.indices" class="index-row">
-        <div class="index-overview-section">
-          <IndexOverviewSingle :index="item.indices" />
-        </div>
-        <div class="core-data-section">
-          <CoreDataSingle :coreData="item.core_data" :index="item.indices" />
-        </div>
-        <div class="history-section">
-          <HistorySingle :history="item.history" :index="item.indices" />
+        <div class="index-row-content">
+          <div class="index-overview-section">
+            <IndexOverviewSingle :index="item.indices" />
+          </div>
+          <div class="core-data-section">
+            <CoreDataSingle :coreData="item.core_data" :index="item.indices" />
+          </div>
+          <div class="history-section">
+            <HistorySingle :history="item.history" :index="item.indices" />
+          </div>
         </div>
       </div>
     </div>
@@ -87,36 +89,110 @@ onUnmounted(() => {
 }
 
 .index-row {
-  display: flex;
-  gap: 10px;
   background-color: #ffffff;
   border-radius: 4px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  /* padding: 10px; */
+  margin-bottom: 10px;
 }
 
-.index-overview-section {
-  /* flex: 1; */
-  width: 280px;
+.index-row-content {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  min-width: fit-content;
 }
 
-.core-data-section {
-  flex: 3;
-  min-width: 600px;
-}
-
-.history-section {
-  /* flex: 1; */
-  width: 240px;
-}
-
-/* 响应式布局 */
-@media (max-width: 1200px) {
+/* 桌面端样式 */
+@media (min-width: 1201px) {
+  .index-row-content {
+    width: 100%;
+    overflow-x: visible;
+  }
   
-  .index-overview-section,
-  .core-data-section,
+  .index-overview-section {
+    width: 280px;
+    flex-shrink: 0;
+  }
+
+  .core-data-section {
+    flex: 3;
+    min-width: 600px;
+    flex-shrink: 0;
+  }
+
   .history-section {
-    min-width: auto;
+    width: 240px;
+    flex-shrink: 0;
+  }
+}
+
+/* 平板端样式 */
+@media (max-width: 1200px) and (min-width: 769px) {
+  .index-row {
+    overflow-x: auto;
+  }
+  
+  .index-overview-section {
+    width: 260px;
+    flex-shrink: 0;
+  }
+
+  .core-data-section {
+    width: 500px;
+    flex-shrink: 0;
+  }
+
+  .history-section {
+    width: 220px;
+    flex-shrink: 0;
+  }
+}
+
+/* 移动端样式 */
+@media (max-width: 768px) {
+  .index-row {
+    overflow-x: auto;
+    /* 添加滚动条样式 */
+    scrollbar-width: thin;
+    scrollbar-color: #909399 #f5f7fa;
+  }
+  
+  /* Webkit浏览器滚动条样式 */
+  .index-row::-webkit-scrollbar {
+    height: 6px;
+  }
+  
+  .index-row::-webkit-scrollbar-track {
+    background: #f5f7fa;
+    border-radius: 3px;
+  }
+  
+  .index-row::-webkit-scrollbar-thumb {
+    background: #909399;
+    border-radius: 3px;
+  }
+  
+  .index-row::-webkit-scrollbar-thumb:hover {
+    background: #606266;
+  }
+  
+  .index-row-content {
+    padding: 8px;
+  }
+  
+  .index-overview-section {
+    width: 240px;
+    flex-shrink: 0;
+  }
+
+  .core-data-section {
+    width: 450px;
+    flex-shrink: 0;
+  }
+
+  .history-section {
+    width: 200px;
+    flex-shrink: 0;
   }
 }
 </style>

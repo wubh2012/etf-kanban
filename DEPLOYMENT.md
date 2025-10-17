@@ -20,6 +20,142 @@
 
 ## 快速部署
 
+目标：在一台 Linux 服务器上，后端使用 Gunicorn 运行 Flask 应用，前端由 Nginx 托管静态资源并反向代理后端 API。
+
+**总体架构**
+- 前端：Vite 构建生成 `frontend/dist`，Nginx 直接托管静态文件。
+- 后端：Gunicorn 在本机回环地址 `127.0.0.1:8100` 监听，Nginx 将 `/api` 代理到此地址。
+- 数据库：SQLite 文件位于 `backend/etf_kanban.db`。
+- 定时更新：用系统定时器（cron 或 systemd timer）调用接口 `/api/update-all-indices`。
+
+**环境准备**
+- 安装基础组件（Ubuntu 示例）：
+  - `sudo apt update && sudo apt install -y python3 python3-venv python3-pip nginx curl`
+- 安装 Node.js（18/20 LTS）：
+  - `curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash - && sudo apt install -y nodejs`
+- 代码目录（示例）：
+  - `sudo mkdir -p /opt/etf-kanban && sudo chown -R $USER:$USER /opt/etf-kanban`
+  - 将项目上传或 `git clone` 到 `/opt/etf-kanban`
+
+**后端部署（Gunicorn）**
+- 创建虚拟环境并安装依赖：
+  - `cd /opt/etf-kanban`
+  - `python3 -m venv venv && source venv/bin/activate`
+  - `pip install -r backend/requirements.txt`
+  - `pip install gunicorn`
+- 生产环境变量（两选一）：
+  - 使用 `backend/.env.production`（推荐）：`FLASK_ENV=production`、`SCHEDULER_ENABLED=false` 等；或
+  - 直接用 `backend/.env` 存放生产值。
+- 初始化数据库（首次部署）：
+  - `python backend/app.py` 启动后看到“数据库文件不存在，开始初始化数据库…”，再 `Ctrl+C` 退出。
+- 测试运行：
+  - `gunicorn --bind 127.0.0.1:8100 backend.app:app`
+  - 验证健康：`curl http://127.0.0.1:8100/api/health`
+
+**作为服务运行（systemd）**
+- 创建 `/etc/systemd/system/etf-kanban-backend.service`：
+```
+[Unit]
+Description=ETF Kanban Backend (Gunicorn)
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/etf-kanban
+EnvironmentFile=/opt/etf-kanban/backend/.env.production
+ExecStart=/opt/etf-kanban/venv/bin/gunicorn --bind 127.0.0.1:8100 --workers 2 backend.app:app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+- 启动与验证：
+  - `sudo systemctl daemon-reload`
+  - `sudo systemctl enable --now etf-kanban-backend`
+  - `journalctl -u etf-kanban-backend -f`
+  - `curl http://127.0.0.1:8100/api/health`
+- 权限注意：确保服务用户对 `backend/etf_kanban.db` 有写权限：
+  - `sudo chown -R www-data:www-data /opt/etf-kanban/backend`
+  - SQLite 并发有限，`--workers` 建议 1–2。
+
+**前端部署（Nginx）**
+- 构建前端：
+  - `cd /opt/etf-kanban/frontend`
+  - `npm ci` 或 `npm install`
+  - `npm run build`（生成 `dist`）
+- 发布静态文件：
+  - `sudo mkdir -p /var/www/etf-kanban`
+  - `sudo cp -r dist/* /var/www/etf-kanban/`
+- Nginx 站点 `/etc/nginx/sites-available/etf-kanban`：
+```
+server {
+    listen 80;
+    server_name your.domain.com;  # 替换为域名或服务器IP
+
+    root /var/www/etf-kanban;
+    index index.html;
+
+    # SPA 路由支持
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # 反向代理后端 API
+    location /api {
+        proxy_pass http://127.0.0.1:8100;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+- 启用并重载：
+  - `sudo ln -s /etc/nginx/sites-available/etf-kanban /etc/nginx/sites-enabled/`
+  - `sudo nginx -t && sudo systemctl reload nginx`
+- 前端 `.env.production` 已设置 `VITE_API_BASE_URL=/api`，构建后请求将走 Nginx 的 `/api` 代理。
+
+**定时更新（推荐外部定时器）**
+- cron（每 15 分钟）：
+  - `crontab -e` 添加：
+    - `*/15 * * * * curl -s -X POST http://127.0.0.1:8100/api/update-all-indices >/dev/null 2>&1`
+- 或 systemd 定时器：
+  - `/etc/systemd/system/etf-kanban-update.service`：
+```
+[Unit]
+Description=ETF Kanban manual update trigger
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/curl -s -X POST http://127.0.0.1:8000/api/update-all-indices
+```
+  - `/etc/systemd/system/etf-kanban-update.timer`：
+```
+[Unit]
+Description=Run ETF Kanban update every 15 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=15min
+
+[Install]
+WantedBy=timers.target
+```
+  - 启用：`sudo systemctl daemon-reload && sudo systemctl enable --now etf-kanban-update.timer`
+
+**注意事项**
+- Gunicorn 监听地址与端口由 `--bind` 控制，不依赖 `.env` 中的 `API_HOST/PORT`。
+- SQLite 写锁：高并发写入可能出现 `database is locked`，控制并发和任务频率。
+- 权限：确保服务用户可写 `backend/etf_kanban.db` 与日志目录。
+- HTTPS：使用 Let’s Encrypt：`sudo apt install certbot python3-certbot-nginx && sudo certbot --nginx -d your.domain.com`。
+- 前端环境：生产用 `frontend/.env.production` 设置 `VITE_API_BASE_URL=/api`；若不走反代，改为完整后端地址。
+
+**故障排查**
+- `ModuleNotFoundError: No module named backend`：在项目根运行 Gunicorn，或用 `--chdir backend app:app`。
+- `.env` 未生效：systemd 使用 `EnvironmentFile` 指定；或直接将生产配置命名为 `backend/.env`。
+- 端口占用：`sudo lsof -i :8100` 查占用并处理。
+- Nginx 无法访问后端：检查反代地址与防火墙、SELinux 状态。
+
+
 ### 使用启动脚本
 
 #### Windows用户

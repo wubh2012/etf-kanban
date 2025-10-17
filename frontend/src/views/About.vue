@@ -40,6 +40,9 @@ export default {
   align-items: center;
   padding: 10px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  /* 让背景撑满可视区域（扣除顶部导航60px） */
+  min-height: calc(100vh - 60px);
+  width: 100%;
 }
 
 .about-card {

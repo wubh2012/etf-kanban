@@ -1,62 +1,66 @@
 <template>
   <div class="core-data-single">
     <!-- 标题栏 -->
-    <div class="header-row">
-      <div class="header-item-fund-code">致敬 & 基金</div>
-      <div class="header-item-support-level">大支撑位</div>
-      <div class="header-item-normal-range">正常区间</div>
-      <div class="header-item-normal-range"></div>
-      <div class="header-item-pressure-level">大压力位</div>
-      <div class="header-item-sell-point">卖出点位</div>
-    </div>
+    <table class="core-data-table">
+      <thead>
+        <tr>
+          <th class="header-item-fund-code">致敬 & 基金</th>
+          <th class="header-item-support-level">大支撑位</th>
+          <th class="header-item-normal-range" colspan="2">正常区间</th>
+          <th class="header-item-pressure-level">大压力位</th>
+          <th class="header-item-sell-point">卖出点位</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <!-- 左侧代码信息 -->
+          <td class="content-item-fund-code">
+            <div v-if="coreData.etf_code" class="code-tag" style="">场内 {{ coreData.etf_code }}</div>
+            <div v-if="coreData.mutual_code" class="code-tag">场外 {{ coreData.mutual_code }}</div>
+          </td>
 
-    <!-- 内容区域 -->
-    <div class="content-row">
-      <!-- 左侧代码信息 -->
-      <div class="content-item-fund-code">
-        <div v-if="coreData.etf_code" class="code-tag">场内 {{ coreData.etf_code }}</div>
-        <div v-if="coreData.mutual_code" class="code-tag">场外 {{ coreData.mutual_code }}</div>
-      </div>
+          <!-- 大支撑位 -->
+          <td class="content-item-support-level">
+            <div class="level-content support">
+              <div class="level-value">{{ coreData.support_level }}</div>
+              <div v-if="coreData.support_comment" class="level-comment">{{ coreData.support_comment }}</div>
+              <div v-if="coreData.support_date" class="level-date">{{ coreData.support_date }}</div>
+            </div>
+          </td>
 
-      <!-- 大支撑位 -->
-      <div class="content-item-support-level">
-        <div class="level-content support">
-          <div class="level-value">{{ coreData.support_level }}</div>
-          <div v-if="coreData.support_comment" class="level-comment">{{ coreData.support_comment }}</div>
-          <div v-if="coreData.support_date" class="level-date">{{ coreData.support_date }}</div>
-        </div>
-      </div>
+          <!-- 正常区间 -->
+          <td class="content-item-normal-range">
+            <div class="level-content normal">
+              <div class="level-value">{{ coreData.normal_level }}</div>
+              <div v-if="coreData.normal_comment" class="level-comment">{{ coreData.normal_comment }}</div>
+              <div v-if="coreData.normal_date" class="level-date">{{ coreData.normal_date }}</div>
+             
+            </div>
+          </td>
+          <td class="content-item-normal-range">
+            <div class="level-content normal">
+              <div class="level-value">{{ coreData.other_level }}</div>
+            </div>
+          </td>
 
-      <!-- 正常区间 -->
-      <div class="content-item-normal-range">
-        <div class="level-content normal">
-          <div class="level-value">{{ coreData.normal_level }}</div>
-          <div v-if="coreData.normal_comment" class="level-comment">{{ coreData.normal_comment }}</div>
-          <div v-if="coreData.normal_date" class="level-date">{{ coreData.normal_date }}</div>
-        </div>
-      </div>
-      <div class="content-item-normal-range">
-        <div class="level-content normal">
-          <div class="level-value">{{ coreData.other_level }}</div>
-        </div>
-      </div>
+          <!-- 大压力位 -->
+          <td class="content-item-pressure-level">
+            <div class="level-content pressure">
+              <div class="level-value">{{ coreData.pressure_level }}</div>
+              <div v-if="coreData.pressure_date" class="level-date">{{ coreData.pressure_date }}</div>
+            </div>
+          </td>
 
-      <!-- 大压力位 -->
-      <div class="content-item-pressure-level">
-        <div class="level-content pressure">
-          <div class="level-value">{{ coreData.pressure_level }}</div>
-          <div v-if="coreData.pressure_date" class="level-date">{{ coreData.pressure_date }}</div>
-        </div>
-      </div>
-
-      <!-- 卖出点位 -->
-      <div class="content-item-sell-point">
-        <div class="level-content sell">
-          <div v-if="coreData.sell_comment" class="level-comment">{{ coreData.sell_comment }}</div>
-          <div v-if="coreData.sell_date" class="level-date">{{ coreData.sell_date }}</div>
-        </div>
-      </div>
-    </div>
+          <!-- 卖出点位 -->
+          <td class="content-item-sell-point">
+            <div class="level-content sell">
+              <div v-if="coreData.sell_comment" class="level-comment">{{ coreData.sell_comment }}</div>
+              <div v-if="coreData.sell_date" class="level-date">{{ coreData.sell_date }}</div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 </template>
 
@@ -85,77 +89,90 @@ export default {
   flex-direction: column;
 }
 
+/* 表格样式 */
+.core-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  height: 100%;
+  table-layout: fixed;
+}
+
 /* 标题栏样式 */
-.header-row {
-  display: flex;
-  flex-direction: row;
+.core-data-table th {
+  /* padding: 10px 15px; */
+  font-weight: bold;
+  text-align: center;
   border-bottom: 1px solid #e6e6e6;
 }
 
 .header-item-fund-code {
-  flex: 1;
-  padding: 10px 15px;
+  width: 16.66%;
   background-color: #00ffcc;
-  font-weight: bold;
-  text-align: center;
   border-right: 1px solid #ddd;
 }
 
 .header-item-support-level {
-  flex: 1;
-  padding: 10px 15px;
+  width: 16.66%;
   background-color: #00FFCD;
-  font-weight: bold;
-  text-align: center;
 }
 
 .header-item-normal-range {
-  flex: 1;
-  padding: 10px 15px;
+  width: 33.33%;
   background-color: #FFC000;
-  font-weight: bold;
-  text-align: center;
   color: #00205F;
 }
 
 .header-item-pressure-level {
-  flex: 1;
-  padding: 10px 15px;
+  width: 16.66%;
   background-color: #FF7C81;
-  font-weight: bold;
-  text-align: center;
   color: #00205F;
   border-right: 1px solid #ddd;
 }
 
 .header-item-sell-point {
-  flex: 1;
-  padding: 10px 15px;
+  width: 16.69%;
   background-color: #FF7C81;
-  font-weight: bold;
-  text-align: center;
   color: #00205F;
 }
 
 /* 内容区域样式 */
-.content-row {
-  display: flex;
-  flex-direction: row;
-  height: calc(100% - 40px);
-  overflow: hidden;
+.core-data-table td {
+  padding: 6px;
+  vertical-align: top;
+  border: 1px solid #ddd;
 }
 
 .content-item-fund-code,
-.content-item-support-level,
-.content-item-normal-range,
+.content-item-support-level {
+  width: 16.66%;
+  height: 100%;
+}
+.content-item-fund-code {
+  /* display: flex; */
+  flex-direction: row;
+  /* width: 100%; */
+}
+
+.content-item-normal-range {
+  width: 33.33%;
+  height: 100%;
+}
+
 .content-item-pressure-level,
 .content-item-sell-point {
-  flex: 1;
-  padding: 6px;
+  width: 16.66%;
+  height: 100%;
+}
+
+/* 数据项通用样式 */
+.level-content {
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  font-size: 12px;
+  word-break: break-word;
   display: flex;
-  align-items: flex-start;
-  justify-content: flex-start;
-  border: 1px solid #ddd;
+  flex-direction: column;
 }
 
 /* 数据项通用样式 */
@@ -190,10 +207,51 @@ export default {
   font-size: 12px;
   background-color: #A6A6A6;
   color: white;
-  padding: 2px;
-  border-radius: 4px;
+  padding: 1px;
   display: inline-block;
-  margin-right: 5px;
-  margin-bottom: 5px;
+}
+
+/* 移动端适配 */
+@media screen and (max-width: 768px) {
+  .core-data-single {
+    height: 100%;
+  }
+  
+  .core-data-table {
+    font-size: 12px;
+  }
+  
+  .core-data-table th {
+    padding: 6px 4px;
+    font-size: 11px;
+  }
+  
+  .core-data-table td {
+    padding: 4px 2px;
+  }
+  
+  .level-content {
+    font-size: 11px;
+  }
+  
+  .level-value {
+    font-size: 11px;
+    margin-bottom: 3px;
+  }
+  
+  .level-comment {
+    font-size: 10px;
+    margin-bottom: 2px;
+  }
+  
+  .level-date {
+    font-size: 10px;
+  }
+  
+  .code-tag {
+    font-size: 10px;
+    padding: 1px;
+    margin-right: 3px;
+  }
 }
 </style>
