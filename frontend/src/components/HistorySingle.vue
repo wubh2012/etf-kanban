@@ -22,7 +22,7 @@
           <span class="history-title low-title">自最低点上涨</span>
         </div>
         <div class="history-content">
-          <div class="history-change-percent positive">+{{ history.three_year_low.rise_from_low }}% ↑</div>
+          <div class="history-change-percent positive">{{ history.three_year_low.rise_from_low }}%↑</div>
           <div class="history-point">
             <div class="point-label">最低点</div>
             <div class="point-value">{{ history.three_year_low.value }}</div>
@@ -45,7 +45,7 @@ export default {
     history: {
       type: Object,
       default: null
-    }
+    },
   }
 }
 </script>
@@ -107,6 +107,9 @@ export default {
   margin-bottom: 6px;
   padding: 4px 8px;
   border-radius: 4px;
+  white-space: nowrap;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* 跌幅样式 - 黑色背景，绿色文字 */

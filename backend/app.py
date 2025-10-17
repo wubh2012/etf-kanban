@@ -144,6 +144,62 @@ def calculate_change_percent(current_point, support_point):
     change_percent = ((current_point - support_point) / support_point) * 100
     return round(change_percent, 2)
 
+def update_history_data(conn, index_code, current_point):
+    """
+    更新历史数据表，检查当前点位是否突破历史最高点或最低点
+    参数:
+        conn: 数据库连接
+        index_code: 指数代码
+        current_point: 当前点位
+    """
+    try:
+        # 获取历史最高点和最低点
+        cursor = conn.execute('SELECT type, value FROM history WHERE index_code = ?', (index_code,))
+        history_data = {row['type']: row['value'] for row in cursor.fetchall()}
+        
+        current_date = get_china_time().strftime('%Y-%m-%d')
+        
+        # 检查是否突破历史最高点
+        if 'three_year_high' in history_data:
+            if current_point > history_data['three_year_high']:
+                # 计算从最高点下跌的幅度
+                change_percent = ((current_point - history_data['three_year_high']) / history_data['three_year_high']) * 100
+                # 更新历史最高点
+                conn.execute('''
+                UPDATE history 
+                SET value = ?, date = ?, change_percent = ?, updated_at = ?
+                WHERE index_code = ? AND type = 'three_year_high'
+                ''', (current_point, current_date, round(change_percent, 2), get_china_time().strftime('%Y-%m-%d %H:%M:%S'), index_code))
+                logger.info(f"指数 {index_code} 突破历史最高点，更新为 {current_point}")
+        else:
+            # 如果没有历史最高点记录，则创建一个
+            conn.execute('''
+            INSERT INTO history (index_code, type, value, date, change_percent)
+            VALUES (?, 'three_year_high', ?, ?, 0)
+            ''', (index_code, current_point, current_date))
+        
+        # 检查是否突破历史最低点
+        if 'three_year_low' in history_data:
+            if current_point < history_data['three_year_low']:
+                # 计算从最低点上涨的幅度
+                change_percent = ((current_point - history_data['three_year_low']) / history_data['three_year_low']) * 100
+                # 更新历史最低点
+                conn.execute('''
+                UPDATE history 
+                SET value = ?, date = ?, change_percent = ?, updated_at = ?
+                WHERE index_code = ? AND type = 'three_year_low'
+                ''', (current_point, current_date, round(change_percent, 2), get_china_time().strftime('%Y-%m-%d %H:%M:%S'), index_code))
+                logger.info(f"指数 {index_code} 突破历史最低点，更新为 {current_point}")
+        else:
+            # 如果没有历史最低点记录，则创建一个
+            conn.execute('''
+            INSERT INTO history (index_code, type, value, date, change_percent)
+            VALUES (?, 'three_year_low', ?, ?, 0)
+            ''', (index_code, current_point, current_date))
+            
+    except Exception as e:
+        logger.error(f"更新指数 {index_code} 历史数据失败: {str(e)}")
+
 def update_index_realtime_data(index_code):
     """
     更新指定指数的实时数据
@@ -178,6 +234,9 @@ def update_index_realtime_data(index_code):
             SET current_point = ?, change_percent = ?, updated_at = ?
             WHERE code = ?
             ''', (current_point, change_percent, get_china_time().strftime('%Y-%m-%d %H:%M:%S'), index_code))
+            
+            # 更新历史数据表
+            # update_history_data(conn, index_code, current_point)
             
             conn.commit()
             logger.info(f"成功更新指数 {index_code} 的实时数据: 当前点位={current_point}, 涨跌幅={change_percent}%")
@@ -650,13 +709,16 @@ def update_history(index_code, history_type):
         if not update_fields:
             return jsonify({'error': 'No valid fields to update'}), 400
         
-        update_values.append(index_code)
-        update_values.append(history_type)
-        
-        conn.execute(f'''
+        # 打印待执行的SQL语句
+        sql = f'''
         UPDATE history SET {', '.join(update_fields)}, updated_at = ?
         WHERE index_code = ? AND type = ?
-        ''', update_values + [get_china_time().strftime('%Y-%m-%d %H:%M:%S')])
+        '''
+        # 正确的参数顺序：先是要更新的字段值，然后是updated_at时间戳，最后是WHERE条件的参数
+        params = update_values + [get_china_time().strftime('%Y-%m-%d %H:%M:%S'), index_code, history_type]
+        print(f"执行的SQL语句: {sql}")
+        print(f"参数: {params}")
+        conn.execute(sql, params)
         
         conn.commit()
         

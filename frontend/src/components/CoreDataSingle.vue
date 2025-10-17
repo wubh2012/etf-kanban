@@ -151,7 +151,7 @@ export default {
 .content-item-pressure-level,
 .content-item-sell-point {
   flex: 1;
-  padding: 10px;
+  padding: 6px;
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;

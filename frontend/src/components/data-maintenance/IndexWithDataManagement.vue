@@ -175,7 +175,7 @@
               <el-card shadow="never" style="margin-bottom: 0;">
                 <template #header>
                   <div class="card-header">
-                    <span>三年高点</span>
+                    <span>2020年起高点</span>
                   </div>
                 </template>
                 <el-form-item label="涨跌幅(%)" prop="historyHigh.change_percent">
@@ -196,7 +196,7 @@
               <el-card shadow="never" style="margin-bottom: 0;">
                 <template #header>
                   <div class="card-header">
-                    <span>三年低点</span>
+                    <span>2020年起低点</span>
                   </div>
                 </template>
                 <el-form-item label="涨跌幅(%)" prop="historyLow.change_percent">
@@ -504,10 +504,10 @@ const handleSubmit = () => {
                     change_percent: form.value.historyLow.change_percent
                   })
                 } catch (createError) {
-                  console.error('创建三年低点历史数据失败:', createError)
+                  console.error('创建低点历史数据失败:', createError)
                 }
               } else {
-                console.error('更新三年低点历史数据失败:', error)
+                console.error('更新低点历史数据失败:', error)
               }
             }
           }
@@ -531,10 +531,10 @@ const handleSubmit = () => {
                     change_percent: form.value.historyHigh.change_percent
                   })
                 } catch (createError) {
-                  console.error('创建三年高点历史数据失败:', createError)
+                  console.error('创建高点历史数据失败:', createError)
                 }
               } else {
-                console.error('更新三年高点历史数据失败:', error)
+                console.error('更新高点历史数据失败:', error)
               }
             }
           }
@@ -558,6 +558,14 @@ watch(() => form.value.current_point, (newVal) => {
   if (newVal !== null && newVal !== undefined) {
     form.value.change_percent = calculateChangePercent(newVal, form.value.support_point);
     form.value.progress = calculateChangePercent(newVal, form.value.pressure_point);
+    
+    // 计算历史数据的涨跌幅
+    if (form.value.historyLow && form.value.historyLow.value) {
+      form.value.historyLow.change_percent = calculateChangePercent(form.value.historyLow.value, newVal);
+    }
+    if (form.value.historyHigh && form.value.historyHigh.value) {
+      form.value.historyHigh.change_percent = calculateChangePercent(form.value.historyHigh.value, newVal);
+    }
   }
 });
 
@@ -570,6 +578,19 @@ watch(() => form.value.support_point, (newVal) => {
 watch(() => form.value.pressure_point, (newVal) => {
   if (newVal !== null && newVal !== undefined && form.value.current_point !== null && form.value.current_point !== undefined) {
     form.value.progress = calculateChangePercent(form.value.current_point, newVal);
+  }
+});
+
+// 监听历史数据点位的变化，实时计算涨跌幅
+watch(() => form.value.historyLow.value, (newVal) => {
+  if (newVal !== null && newVal !== undefined && form.value.current_point !== null && form.value.current_point !== undefined) {
+    form.value.historyLow.change_percent = calculateChangePercent(newVal, form.value.current_point);
+  }
+});
+
+watch(() => form.value.historyHigh.value, (newVal) => {
+  if (newVal !== null && newVal !== undefined && form.value.current_point !== null && form.value.current_point !== undefined) {
+    form.value.historyHigh.change_percent = calculateChangePercent(newVal, form.value.current_point);
   }
 });
 </script>
