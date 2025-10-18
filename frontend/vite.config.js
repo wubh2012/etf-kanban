@@ -22,6 +22,12 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'static',
-    sourcemap: false
+    sourcemap: false,
+    // 确保构建后的应用也支持SPA路由
+    rollupOptions: {
+      output: {
+        manualChunks: undefined
+      }
+    }
   }
 })

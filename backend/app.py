@@ -34,10 +34,6 @@ DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///etf_kanban.db')
 # 设置中国时区
 china_tz = pytz.timezone('Asia/Shanghai')
 
-def get_china_time():
-    """获取中国时区的当前时间"""
-    return datetime.now(china_tz)
-
 # User-Agent列表，用于随机选择
 USER_AGENTS = [
     'Opera/8.0 (Macintosh; PPC Mac OS X; U; en)', 
@@ -62,6 +58,18 @@ USER_AGENTS = [
     'Mozilla/5.0 (Macintosh; PPC Mac OS X; U; en) Opera 8.0', 
 ]
 
+# 指数相关字段定义
+INDEX_FIELDS = [
+    'id', 'name', 'code', 'order_no', 'current_point', 'change_percent',
+    'support_point', 'pressure_point', 'progress', 'etf_code', 'mutual_code',
+    'support_level', 'normal_level', 'pressure_level', 'sell_level', 
+    'other_level', 'updated_at'
+]
+
+def get_china_time():
+    """获取中国时区的当前时间"""
+    return datetime.now(china_tz)
+
 def get_db_connection():
     """获取数据库连接"""
     db_path = os.path.join(os.path.dirname(__file__), 'etf_kanban.db')
@@ -69,66 +77,7 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row  # 使结果可以按列名访问
     return conn
 
-def get_code_prefix(stock_code):
-    """
-    根据股票代码判断交易所前缀（sz或sh）
-    :param stock_code: 股票代码（字符串，如"399006"、"600000"）
-    :return: 交易所前缀"sz"或"sh"
-    """
-    if not stock_code or len(stock_code) < 3:
-        return None  # 无效代码
-    
-    # 取前3位判断
-    prefix = stock_code[:3]
-    # 特殊代码判断
-    if stock_code.upper().startswith('HS'):
-        return "hk"
-    if stock_code.upper() == 'GDAXI':
-        return "de"
-    # 深圳交易所规则
-    if prefix in ["395", "399"]:
-        return "sz"
-    # 上海交易所规则
-    elif prefix in ["000", "001"]:
-        return "s_sh"
-    else:
-        return "s_sh"  # 无法识别
 
-@app.route('/get/indexdata/<index_code>', methods=['GET'])
-def get_realtime_index_data(index_code):
-    """
-    使用腾讯财经API获取指数数据
-    """
-    try:
-        # 尝试使用腾讯财经API
-        prefix = get_code_prefix(index_code)
-        url = f"http://qt.gtimg.cn/q={prefix}{index_code}"
-
-
-        headers = {
-            'User-Agent': random.choice(USER_AGENTS),
-            'Referer': 'http://finance.qq.com',
-        }
-        response = requests.get(url, timeout=10, headers=headers)
-        response.encoding = 'gbk'
-        logger.info(f"指数 {index_code} API返回: {response.text}")
-        if response.status_code == 200 and response.text.startswith('v_'):
-            data_part = response.text.split('"')[1]
-            data_items = data_part.split('~')
-            
-            if len(data_items) >= 4 and data_items[3] and data_items[4]:
-                current_point = float(data_items[3])
-                logger.info(f"指数 {index_code} 当前点位: {current_point}")
-                return {
-                    'current_point': current_point,
-                    'success': True
-                }
-        
-        return None
-    except Exception as e:
-        logger.error(f"API获取指数 {index_code} 数据异常: {str(e)}")
-        return None
-        
 def calculate_change_percent(current_point, support_point):
     """
     计算距离大支撑涨跌幅百分比
@@ -226,7 +175,7 @@ def update_index_realtime_data(index_code):
             current_point = realtime_data['current_point']
             
             # 计算涨跌幅百分比
-            change_percent = calculate_change_percent(current_point, support_point)
+            # change_percent = calculate_change_percent(current_point, support_point)
             
             # 更新数据库中的当前点位和涨跌幅
             conn.execute('''
@@ -313,6 +262,132 @@ def start_scheduler():
     
     return scheduler
 
+def get_code_prefix(stock_code):
+    """
+    根据股票代码判断交易所前缀（sz或sh）
+    :param stock_code: 股票代码（字符串，如"399006"、"600000"）
+    :return: 交易所前缀"sz"或"sh"
+    """
+    if not stock_code or len(stock_code) < 3:
+        return None  # 无效代码
+    
+    # 取前3位判断
+    prefix = stock_code[:3]
+    # 特殊代码判断
+    if stock_code.upper().startswith('HS'):
+        return "hk"
+    if stock_code.upper() == '00700':
+        return "r_hk"
+    # 深圳交易所规则
+    if prefix in ["395", "399"]:
+        return "sz"
+    # 上海交易所规则
+    elif prefix in ["000", "001"]:
+        return "s_sh"
+    else:
+        return "s_sh"  # 无法识别
+
+@app.route('/get/indexdata/<index_code>', methods=['GET'])
+def get_realtime_index_data(index_code):
+    """
+    根据指数代码使用不同API获取实时数据
+    对于H30533、GDAXI、HSHCI使用东方财富API，其他使用腾讯财经API
+    """
+    try:
+        # 特殊指数使用东方财富API
+        if index_code.upper() in ['H30533', 'GDAXI', 'HSHCI']:
+            return get_realtime_index_data_eastmoney(index_code)
+        
+        # 其他指数使用腾讯财经API
+        # 尝试使用腾讯财经API
+        prefix = get_code_prefix(index_code)
+        url = f"http://qt.gtimg.cn/q={prefix}{index_code}"
+        
+        # 上证：
+        # http://qt.gtimg.cn/q=sh000001
+        # 深圳：
+        # http://qt.gtimg.cn/q=sz399006
+        # 港股指数：
+        # http://qt.gtimg.cn/q=hkHSTECH
+        # 港股股票：
+        # http://qt.gtimg.cn/q=r_hk00700
+        # 美股股票
+        # http://qt.gtimg.cn/q=r_usAAPL
+
+        headers = {
+            'User-Agent': random.choice(USER_AGENTS),
+            'Referer': 'http://finance.qq.com',
+        }
+        response = requests.get(url, timeout=10, headers=headers)
+        response.encoding = 'gbk'
+        logger.info(f"指数 {index_code} API返回: {response.text}")
+        if response.status_code == 200 and response.text.startswith('v_'):
+            data_part = response.text.split('"')[1]
+            data_items = data_part.split('~')
+            
+            if len(data_items) >= 4 and data_items[3] and data_items[4]:
+                current_point = float(data_items[3])
+                logger.info(f"指数 {index_code} 当前点位: {current_point}")
+                return {
+                    'current_point': current_point,
+                    'success': True
+                }
+        
+        return None
+    except Exception as e:
+        logger.error(f"API获取指数 {index_code} 数据异常: {str(e)}")
+        return None
+
+
+def get_realtime_index_data_eastmoney(index_code):
+    """
+    使用东方财富API获取指数数据
+    参数:
+        index_code: 指数代码 (H30533, GDAXI, HSHCI等)
+    返回:
+        包含当前点位和成功状态的字典
+    """
+    try:
+        # 构造东方财富API的secid参数
+        secid_map = {
+            'H30533': '2.H30533',  # 需要确认实际的secid映射
+            'GDAXI': '100.GDAXI',    # 德国DAX指数
+            'HSHCI': '124.HSHCI'     # 恒生医疗保健指数
+        }
+        
+        # 获取secid，如果不在映射中则使用默认格式
+        secid = secid_map.get(index_code.upper(), f'124.{index_code}')
+        
+        # 构造API URL
+        url = f"https://push2.eastmoney.com/api/qt/stock/get?secid={secid}&fields=f43,f57,f58,f169,f170"
+        
+        headers = {
+            'User-Agent': random.choice(USER_AGENTS),
+            'Referer': 'https://quote.eastmoney.com/',
+        }
+        
+        response = requests.get(url, timeout=10, headers=headers)
+        response.encoding = 'utf-8'
+        logger.info(f"东方财富API返回 {index_code}: {response.text}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # 检查返回数据是否成功
+            if data.get('rc') == 0 and data.get('data'):
+                # f43字段是最新的点位，需要除以100
+                current_point = float(data['data']['f43']) / 100
+                logger.info(f"指数 {index_code} 当前点位: {current_point}")
+                return {
+                    'current_point': current_point,
+                    'success': True
+                }
+        
+        return None
+    except Exception as e:
+        logger.error(f"东方财富API获取指数 {index_code} 数据异常: {str(e)}")
+        return None
+        
 @app.route('/', methods=['GET'])
 def home():
     """首页"""
@@ -324,13 +399,7 @@ def row_to_dict(row, fields):
     """将数据库行转换为指定字段的字典"""
     return {field: row[field] for field in fields if field in row}
 
-# 指数相关字段定义
-INDEX_FIELDS = [
-    'id', 'name', 'code', 'order_no', 'current_point', 'change_percent',
-    'support_point', 'pressure_point', 'progress', 'etf_code', 'mutual_code',
-    'support_level', 'normal_level', 'pressure_level', 'sell_level', 
-    'other_level', 'updated_at'
-]
+
 
 @app.route('/api/dashboard', methods=['GET'])
 def get_dashboard_data():
