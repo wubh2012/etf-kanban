@@ -21,6 +21,10 @@
             <i class="icon">🔄</i>
             <span>数据还在完善中,不准确之处,请多多包涵!</span>
           </li>
+          <li class="about-item">
+            <i class="icon">💻</i>
+            <span>技术支持 by 水果芋头</span>
+          </li>
         </ul>
       </div>
     </div>

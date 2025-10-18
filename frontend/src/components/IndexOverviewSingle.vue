@@ -13,11 +13,15 @@
     <div class="percentage-info">
       <div class="percentage-item">
         <span class="percentage-label">距离支撑点位:</span>
-        <span class="percentage-value support-distance" style="color: #00FFCD;">{{ calculateSupportDistance() }}%</span>
+        <span class="percentage-value support-distance"
+          :style="{ color: calculateSupportDistance() > 0 ? 'red' : '#00AF50' }">{{ calculateSupportDistance()
+          }}%</span>
       </div>
       <div class="percentage-item" v-if="index.pressure_point">
         <span class="percentage-label">距离压力位:</span>
-        <span class="percentage-value pressure-distance" style="color: red;">{{ calculatePressureDistance() }}%</span>
+        <span class="percentage-value pressure-distance"
+          :style="{ color: calculatePressureDistance() > 0 ? 'red' : '#00AF50' }">{{ calculatePressureDistance()
+          }}%</span>
       </div>
     </div>
     <div class="scale-container">
@@ -39,7 +43,7 @@
           <div class="marker-text" style="color: #007bff;">压力位</div>
         </div>
       </div>
-      
+
     </div>
   </div>
 </template>
@@ -57,46 +61,58 @@ export default {
     getIndexUrl() {
       // 特殊指数列表，需要使用gb前缀
       const specialIndices = ['GDAXI', 'HSHCI', 'HSI', 'HSTECH'];
-      
+
       // 检查当前指数是否在特殊列表中
       if (specialIndices.includes(this.index.code)) {
         return `https://quote.eastmoney.com/gb/zs${this.index.code}.html`;
       }
-      if(this.index.code === 'H30533'){
+      if (this.index.code === 'H30533') {
         return 'https://quote.eastmoney.com/zz/2.H30533.html';
       }
-      if(this.index.code === '932000'){
+      if (this.index.code === '932000') {
         return 'https://quote.eastmoney.com/zz/2.932000.html';
       }
-      if(this.index.code === "00700"){
+      if (this.index.code === "00700") {
         return `https://xueqiu.com/S/00700`;
       }
-      
+
       // 默认使用普通链接
       return `http://quote.eastmoney.com/zs${this.index.code}.html`;
     },
     // 获取标尺渐变色样式
     getScaleBarStyle() {
-      // 计算支撑位和中间区域的位置百分比
-      let temp =  this.getChangePercent();
-      let middlePosition = Number(temp) + Number(15);
-      
+      let css = ``;
+      if (this.index.current_point <= this.index.support_point) {
+        let supportDistance = Math.abs(this.calculateSupportDistance());
+        let tempSupportDistance = 14 - Math.ceil(supportDistance * 15 / 100);
+        css = `#01FFCD 0%, ${tempSupportDistance}%,
+        #D5FFEB ${tempSupportDistance}% 15%, #ECF0F9 15% 100%`;
+      } else if (this.index.current_point > this.index.support_point) {
+        // 计算支撑位和中间区域的位置百分比
+        let middlePosition = Number(this.getChangePercent()) * 65 / 100 + 15;
+        css = `#01FFCD 0% 15%, #FFC000 15% ${middlePosition}%, #FFF2CD ${middlePosition}% 80%, #FFF2CD 80% 100%`;
+
+        if (this.index.pressure_point && this.index.current_point >= this.index.pressure_point) {
+          let pressureDistance = Math.abs(this.calculatePressureDistance());
+          let tempPressureDistance = 80 + (pressureDistance * 25 / 100);
+          css = `#01FFCD 0% 15%, #FFC000 15% 80%, #fe0000 80% ${tempPressureDistance}%, #fde0e2 ${tempPressureDistance}% 100%`;
+        } else {
+          css = `#01FFCD 0% 15%, #FFC000 15% ${middlePosition}%, #FFF2CD ${middlePosition}% 80%, #FDE0E2 80% 100%`;
+        }
+
+      }
+
       return {
-        background: `linear-gradient(to right, 
-          #48D1CC 0%, #48D1CC 15%, 
-          #FFD700 15%, #FFD700 ${middlePosition}%, 
-          #FFFACD ${middlePosition}%, #FFFACD 80%, 
-          #FFD2D2 80%, #FFD2D2 100%
-        )`
+        background: `linear-gradient(to right, ${css})`
       };
     },
     // 计算支撑位在标尺上的位置百分比
     getChangePercent() {
       // 假设标尺的最小值是支撑位的0.9倍，最大值是支撑位的1.8倍
       const minValue = parseFloat(this.index.support_point);
-      const currentPoint = parseFloat(this.index.current_point);  
-      const maxValue = this.index.pressure_point ? parseFloat(this.index.pressure_point): minValue * 2 ;
-     
+      const currentPoint = parseFloat(this.index.current_point);
+      const maxValue = this.index.pressure_point ? parseFloat(this.index.pressure_point) : minValue * 2;
+
       // 计算支撑位在整个范围中的位置百分比
       return ((currentPoint - minValue) / (maxValue - minValue) * 100).toFixed(2);
     },
@@ -122,13 +138,13 @@ export default {
     // 格式化更新时间
     formatUpdateTime(timeStr) {
       if (!timeStr) return '';
-      
+
       // 如果时间字符串包含空格，说明是完整的时间戳
       if (timeStr.includes(' ')) {
         const date = new Date(timeStr);
         return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
       }
-      
+
       // 否则假设是日期字符串
       return timeStr;
     }
@@ -213,7 +229,8 @@ export default {
 }
 
 .support-distance {
-  color: #F56C6C; /* 红色 */
+  color: #F56C6C;
+  /* 红色 */
 }
 
 .index-link {
@@ -248,7 +265,8 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
-  transform: translateX(-50%); /* 使标记以自身中心对齐 */
+  transform: translateX(-50%);
+  /* 使标记以自身中心对齐 */
 }
 
 .marker-line {
@@ -260,7 +278,8 @@ export default {
 }
 
 .marker-line.red {
-  background-color: #d9534f; /* 红色刻度线 */
+  background-color: #d9534f;
+  /* 红色刻度线 */
 }
 
 .marker-label {
