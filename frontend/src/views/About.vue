@@ -11,15 +11,12 @@
           </li>
           <li class="about-item">
             <i class="icon">🎨</i>
-            <span>图表原创来源于新米练习菌，在此基础上进行了一定的修改</span>
+            <span>图表原创来源于新米练习菌，本站在此基础上进行了一些修改，显示方式有一定的差异</span>
           </li>
           <li class="about-item">
             <i class="icon">🐮</i>
-            <span>E大牛逼 🍺</span>
-          </li>
-          <li class="about-item">
-            <i class="icon">🔄</i>
-            <span>数据还在完善中,不准确之处,请多多包涵!</span>
+            <span>E大语录：“杀不死我的，只会让我更强大”。投资是对自我、世界认知，以及对情绪的控制</span>
+            <span></span>
           </li>
           <li class="about-item">
             <i class="icon">💻</i>

@@ -641,7 +641,7 @@ watch(() => form.value.historyHigh.value, (newVal) => {
 
 /* 点位颜色样式 */
 .current-point-value {
-  color: #909399;
+  color: #E6A23C;
   font-weight: bold;
 }
 
@@ -651,7 +651,7 @@ watch(() => form.value.historyHigh.value, (newVal) => {
 }
 
 .pressure-point-value {
-  color: #E6A23C;
+  color: #F56C6C;
   font-weight: bold;
 }
 </style>

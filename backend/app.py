@@ -175,7 +175,7 @@ def update_index_realtime_data(index_code):
             current_point = realtime_data['current_point']
             
             # 计算涨跌幅百分比
-            # change_percent = calculate_change_percent(current_point, support_point)
+            change_percent = calculate_change_percent(current_point, support_point)
             
             # 更新数据库中的当前点位和涨跌幅
             conn.execute('''
@@ -185,10 +185,10 @@ def update_index_realtime_data(index_code):
             ''', (current_point, change_percent, get_china_time().strftime('%Y-%m-%d %H:%M:%S'), index_code))
             
             # 更新历史数据表
-            # update_history_data(conn, index_code, current_point)
+            update_history_data(conn, index_code, current_point)
             
             conn.commit()
-            logger.info(f"成功更新指数 {index_code} 的实时数据: 当前点位={current_point}, 涨跌幅={change_percent}%")
+            logger.info(f"成功更新指数 {index_code} 的实时数据: 当前点位={current_point}")
             return True
             
         except Exception as e:
@@ -295,7 +295,7 @@ def get_realtime_index_data(index_code):
     """
     try:
         # 特殊指数使用东方财富API
-        if index_code.upper() in ['H30533', 'GDAXI', 'HSHCI']:
+        if index_code.upper() in ['H30533', 'GDAXI', 'HSHCI','932000']:
             return get_realtime_index_data_eastmoney(index_code)
         
         # 其他指数使用腾讯财经API
@@ -352,7 +352,8 @@ def get_realtime_index_data_eastmoney(index_code):
         secid_map = {
             'H30533': '2.H30533',  # 需要确认实际的secid映射
             'GDAXI': '100.GDAXI',    # 德国DAX指数
-            'HSHCI': '124.HSHCI'     # 恒生医疗保健指数
+            'HSHCI': '124.HSHCI',     # 恒生医疗保健指数
+            '932000': '2.932000'    # 中证2000
         }
         
         # 获取secid，如果不在映射中则使用默认格式
