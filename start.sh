@@ -27,7 +27,7 @@ docker-compose up --build -d
 # 检查容器状态
 if [ $? -eq 0 ]; then
     echo "应用启动成功!"
-    echo "访问地址: http://localhost:5000"
+    echo "访问地址: http://localhost:8083"
     echo ""
     echo "查看容器状态: docker-compose ps"
     echo "查看日志: docker-compose logs -f"

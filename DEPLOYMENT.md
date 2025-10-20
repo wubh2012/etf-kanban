@@ -1,15 +1,16 @@
-# 金融数据看板部署指南
+# ETF看板部署指南
 
-本文档提供了金融数据看板应用的详细部署和使用说明。
+本文档提供了ETF看板应用的详细部署和使用说明。
 
 ## 目录
 
 1. [系统要求](#系统要求)
-2. [快速部署](#快速部署)
-3. [手动部署](#手动部署)
-4. [开发环境设置](#开发环境设置)
-5. [API接口文档](#api接口文档)
-6. [常见问题](#常见问题)
+2. [Linux环境部署](#linux环境部署)
+3. [使用Docker Compose](#使用docker-compose)
+4. [手动部署](#手动部署)
+5. [开发环境设置](#开发环境设置)
+6. [API接口文档](#api接口文档)
+7. [常见问题](#常见问题)
 
 ## 系统要求
 
@@ -18,13 +19,13 @@
 - 至少2GB可用内存
 - 至少1GB可用磁盘空间
 
-## 快速部署
+## Linux环境部署
 
 目标：在一台 Linux 服务器上，后端使用 Gunicorn 运行 Flask 应用，前端由 Nginx 托管静态资源并反向代理后端 API。
 
 **总体架构**
 - 前端：Vite 构建生成 `frontend/dist`，Nginx 直接托管静态文件。
-- 后端：Gunicorn 在本机回环地址 `127.0.0.1:8100` 监听，Nginx 将 `/api` 代理到此地址。
+- 后端：Gunicorn 在本机回环地址 `127.0.0.1:5000` 监听，Nginx 将 `/api` 代理到此地址。
 - 数据库：SQLite 文件位于 `backend/etf_kanban.db`。
 - 定时更新：用系统定时器（cron 或 systemd timer）调用接口 `/api/update-all-indices`。
 
@@ -49,8 +50,8 @@
 - 初始化数据库（首次部署）：
   - `python backend/app.py` 启动后看到“数据库文件不存在，开始初始化数据库…”，再 `Ctrl+C` 退出。
 - 测试运行：
-  - `gunicorn --bind 127.0.0.1:8100 backend.app:app`
-  - 验证健康：`curl http://127.0.0.1:8100/api/health`
+  - `gunicorn --bind 127.0.0.1:5000 backend.app:app`
+  - 验证健康：`curl http://127.0.0.1:5000/api/health`
 
 **作为服务运行（systemd）**
 - 创建 `/etc/systemd/system/etf-kanban-backend.service`：
@@ -62,7 +63,7 @@ After=network.target
 [Service]
 WorkingDirectory=/opt/etf-kanban
 EnvironmentFile=/opt/etf-kanban/backend/.env.production
-ExecStart=/opt/etf-kanban/venv/bin/gunicorn --bind 127.0.0.1:8100 --workers 2 backend.app:app
+ExecStart=/opt/etf-kanban/venv/bin/gunicorn --bind 127.0.0.1:5000 --workers 2 backend.app:app
 Restart=always
 
 [Install]
@@ -101,7 +102,7 @@ server {
 
     # 反向代理后端 API
     location /api {
-        proxy_pass http://127.0.0.1:8100;
+        proxy_pass http://127.0.0.1:5000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -118,29 +119,6 @@ server {
 - cron（每 15 分钟）：
   - `crontab -e` 添加：
     - `*/15 * * * * curl -s -X POST http://127.0.0.1:8100/api/update-all-indices >/dev/null 2>&1`
-- 或 systemd 定时器：
-  - `/etc/systemd/system/etf-kanban-update.service`：
-```
-[Unit]
-Description=ETF Kanban manual update trigger
-
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/curl -s -X POST http://127.0.0.1:8000/api/update-all-indices
-```
-  - `/etc/systemd/system/etf-kanban-update.timer`：
-```
-[Unit]
-Description=Run ETF Kanban update every 15 minutes
-
-[Timer]
-OnBootSec=2min
-OnUnitActiveSec=15min
-
-[Install]
-WantedBy=timers.target
-```
-  - 启用：`sudo systemctl daemon-reload && sudo systemctl enable --now etf-kanban-update.timer`
 
 **注意事项**
 - Gunicorn 监听地址与端口由 `--bind` 控制，不依赖 `.env` 中的 `API_HOST/PORT`。
@@ -152,36 +130,120 @@ WantedBy=timers.target
 **故障排查**
 - `ModuleNotFoundError: No module named backend`：在项目根运行 Gunicorn，或用 `--chdir backend app:app`。
 - `.env` 未生效：systemd 使用 `EnvironmentFile` 指定；或直接将生产配置命名为 `backend/.env`。
-- 端口占用：`sudo lsof -i :8100` 查占用并处理。
+- 端口占用：`sudo lsof -i :5000` 查占用并处理。
 - Nginx 无法访问后端：检查反代地址与防火墙、SELinux 状态。
 
+现在可以通过 `http://localhost:80` 访问前端应用， 后端服务运行在 `http://localhost:5000`。
 
-### 使用启动脚本
+## 使用Docker Compose
 
-#### Windows用户
+Docker部署是推荐的部署方式，它将应用的所有组件（前端、后端、Nginx）打包在一个容器中，简化了部署和维护过程。
 
-1. 双击运行 `start.bat` 文件
-2. 等待脚本执行完成
-3. 在浏览器中访问 `http://localhost:5000`
+#### 环境要求
 
-#### Linux/Mac用户
+- Docker 20.10+
+- Docker Compose 1.29+
+- 至少2GB可用内存
+- 至少1GB可用磁盘空间
 
-1. 在终端中运行：
-   ```bash
-   chmod +x start.sh
-   ./start.sh
-   ```
-2. 等待脚本执行完成
-3. 在浏览器中访问 `http://localhost:5000`
+#### Docker架构说明
 
-### 使用Docker Compose
+ETF看板应用采用多阶段构建的Docker镜像：
+
+1. **前端构建阶段**：使用Node.js环境构建Vue前端应用
+2. **后端构建阶段**：使用Python环境安装Flask后端依赖
+3. **生产阶段**：基于Nginx Alpine镜像，集成前端静态文件和后端服务
+
+应用架构：
+- Nginx监听80端口，处理前端静态文件和API请求代理
+- Flask后端服务运行在5000端口
+- SQLite数据库文件位于`backend/etf_kanban.db`
+
+#### 配置说明
+
+**docker-compose.yml关键配置**：
+
+```yaml
+version: '3.8'
+
+services:
+  etf-kanban:
+    build: .
+    ports:
+      - "8083:80"  # 主机端口:容器端口
+    volumes:
+      - ./backend/etf_kanban.db:/app/etf_kanban.db  # 数据库持久化
+    environment:
+      - FLASK_ENV=production
+      - API_HOST=0.0.0.0
+      - API_PORT=5000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+```
+
+配置说明：
+- `ports`: 将主机的8083端口映射到容器的80端口（Nginx）
+- `volumes`: 挂载数据库文件实现数据持久化
+- `environment`: 设置运行环境变量
+- `restart`: 容器异常退出时自动重启
+- `healthcheck`: 定期检查应用健康状态
+
+#### 部署步骤
 
 1. 确保Docker和Docker Compose已安装
-2. 在项目根目录运行：
+2. 在项目根目录运行以下命令构建并启动服务：
    ```bash
    docker-compose up --build -d
    ```
-3. 在浏览器中访问 `http://localhost:5000`
+3. 等待构建完成，首次构建可能需要几分钟时间
+4. 在浏览器中访问 `http://localhost:8083`
+
+#### 管理命令
+
+- 查看服务状态：
+  ```bash
+  docker-compose ps
+  ```
+
+- 查看服务日志：
+  ```bash
+  docker-compose logs -f
+  ```
+
+- 停止服务：
+  ```bash
+  docker-compose down
+  ```
+
+- 重启服务：
+  ```bash
+  docker-compose restart
+  ```
+
+- 重新构建并启动：
+  ```bash
+  docker-compose up --build -d
+  ```
+
+#### 数据持久化
+
+数据库文件`etf_kanban.db`通过volume挂载实现持久化存储：
+- 主机路径：`./backend/etf_kanban.db`
+- 容器路径：`/app/etf_kanban.db`
+
+这样即使容器被删除，数据也不会丢失。
+
+#### 端口配置
+
+默认情况下，应用通过主机的8083端口访问。如需修改端口：
+1. 编辑`docker-compose.yml`文件
+2. 修改`ports`配置，例如改为`"9000:80"`
+3. 重新启动服务：`docker-compose down && docker-compose up -d`
 
 ## 手动部署
 
@@ -332,14 +394,6 @@ WantedBy=timers.target
   - `index_code`: 指数代码，如"399006"
 - **响应示例**: 看板数据接口中特定指数的数据
 
-### 获取特定指数的核心数据
-
-- **URL**: `/api/indices/<index_code>/core_data`
-- **方法**: GET
-- **参数**: 
-  - `index_code`: 指数代码，如"399006"
-- **响应示例**: 看板数据接口中特定指数的核心数据
-
 ### 获取特定指数的历史数据
 
 - **URL**: `/api/indices/<index_code>/history`
@@ -369,9 +423,8 @@ A: 前端使用Vue 3和Element Plus组件库。要自定义样式：
 
 A: 要添加新指数：
 
-1. 在SQLite数据库的`indices`表中添加新记录
-2. 在`core_data`表中添加对应的核心数据
-3. 在`history`表中添加对应的历史数据
+1. 在SQLite数据库的`index_with_data`表中添加新记录
+2. 在`history`表中添加对应的历史数据
 
 ### Q: 如何设置定时更新数据？
 
@@ -390,3 +443,46 @@ A: 生产环境部署建议：
 3. 设置SSL证书启用HTTPS
 4. 配置数据备份策略
 5. 设置监控和日志收集
+
+### Docker相关问题
+
+#### Q: 端口被占用怎么办？
+
+A: 如果启动时出现端口冲突错误，可以修改`docker-compose.yml`中的端口映射：
+1. 编辑`docker-compose.yml`文件
+2. 修改`ports`配置，例如从`"8083:80"`改为`"9000:80"`
+3. 重新启动服务：`docker-compose down && docker-compose up -d`
+
+#### Q: 如何备份和恢复数据？
+
+A: 数据库文件已通过volume挂载实现持久化：
+- 备份：直接复制`backend/etf_kanban.db`文件
+- 恢复：将备份文件复制回`backend/etf_kanban.db`
+
+#### Q: 如何查看容器日志？
+
+A: 使用以下命令查看容器日志：
+```bash
+docker-compose logs -f
+```
+
+#### Q: 如何更新应用版本？
+
+A: 更新应用需要重新构建镜像：
+1. 拉取最新代码：`git pull`
+2. 重新构建并启动：`docker-compose up --build -d`
+
+#### Q: 容器启动失败怎么办？
+
+A: 排查步骤：
+1. 查看容器状态：`docker-compose ps`
+2. 查看详细日志：`docker-compose logs`
+3. 检查端口占用：`netstat -an | grep 8083`
+4. 检查文件权限：确保`backend/etf_kanban.db`文件存在且有读写权限
+
+#### Q: 如何在不同环境中使用不同的配置？
+
+A: 可以通过环境变量或修改`docker-compose.yml`来实现：
+1. 在`docker-compose.yml`的`environment`部分添加新的环境变量
+2. 在应用代码中读取这些环境变量
+3. 重新构建并启动服务

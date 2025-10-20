@@ -40,7 +40,6 @@ api.interceptors.response.use(
  * @returns {Promise} 看板数据
  */
 export const getDashboardData = (refreshRealtime = false) => {
-  // refreshRealtime = true
   const params = refreshRealtime ? '?refresh=true' : '';
   return api.get(`/dashboard${params}`);
 };
