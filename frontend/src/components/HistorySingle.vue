@@ -7,7 +7,7 @@
           <span class="history-title">自最高点跌幅</span>
         </div>
         <div class="history-content">
-          <div class="history-change-percent negative">{{ history.three_year_high.drop_from_high }}%</div>
+          <div class="history-change-percent negative">{{ calculateDropFromHigh() }}%</div>
           <div class="history-point">
             <div class="point-label">最高点</div>
             <div class="point-value">{{ history.three_year_high.value }}</div>
@@ -22,7 +22,7 @@
           <span class="history-title low-title">自最低点上涨</span>
         </div>
         <div class="history-content">
-          <div class="history-change-percent positive">{{ history.three_year_low.rise_from_low }}%↑</div>
+          <div class="history-change-percent positive">{{ calculateRiseFromLow() }}%↑</div>
           <div class="history-point">
             <div class="point-label">最低点</div>
             <div class="point-value">{{ history.three_year_low.value }}</div>
@@ -46,6 +46,34 @@ export default {
       type: Object,
       default: null
     },
+    index: {
+      type: Object,
+      default: null
+    }
+  },
+  methods: {
+    // 计算自最高点的跌幅百分比
+    calculateDropFromHigh() {
+      if (!this.history || !this.history.three_year_high || !this.index || !this.index.current_point) {
+        return 0;
+      }
+      const currentPoint = parseFloat(this.index.current_point);
+      const highPoint = parseFloat(this.history.three_year_high.value);
+      if (highPoint === 0) return 0;
+      const dropPercent = ((highPoint - currentPoint) / highPoint) * 100;
+      return dropPercent.toFixed(2);
+    },
+    // 计算自最低点的涨幅百分比
+    calculateRiseFromLow() {
+      if (!this.history || !this.history.three_year_low || !this.index || !this.index.current_point) {
+        return 0;
+      }
+      const currentPoint = parseFloat(this.index.current_point);
+      const lowPoint = parseFloat(this.history.three_year_low.value);
+      if (lowPoint === 0) return 0;
+      const risePercent = ((currentPoint - lowPoint) / lowPoint) * 100;
+      return risePercent.toFixed(2);
+    }
   }
 }
 </script>
